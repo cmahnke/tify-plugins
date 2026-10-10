@@ -2,7 +2,7 @@ import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import '@annotorious/openseadragon/annotorious-openseadragon.css';
 import Tify from 'tify';
-import { TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
+import { DOCK_ICONS, TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
 import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
 import { annotoriousPlugin, type AnnotoriousPlugin } from '@projektemacher/tify-plugin-annotorious';
 
@@ -19,6 +19,15 @@ const { lang, t } = await createTranslator(undefined, { de });
 applyStaticTranslations(t, lang);
 const input = document.querySelector('#manifest') as HTMLInputElement;
 input.value = params.get('manifest') ?? DEFAULT_ANNOTATED_MANIFEST;
+
+// In-viewer toggle for the docked panel (mirrors TIFY's toolbar dock button).
+const toggle = document.querySelector('#toggle-panel');
+if (toggle) {
+  toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${DOCK_ICONS.comment}</svg>`;
+  toggle.addEventListener('click', () => {
+    document.querySelector('.tify-plugin-dock-btn')?.dispatchEvent(new MouseEvent('click'));
+  });
+}
 
 let tify: Tify | null = null;
 let plugin: AnnotoriousPlugin | null = null;

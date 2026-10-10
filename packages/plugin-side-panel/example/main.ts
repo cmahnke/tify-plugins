@@ -1,8 +1,13 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import Tify from 'tify';
-import { COOKBOOK_MANIFEST, TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
-import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
+import {
+  COOKBOOK_MANIFEST,
+  DOCK_ICONS,
+  TIFY_TRANSLATIONS_URL,
+  applyStaticTranslations,
+  createTranslator,
+} from '@projektemacher/tify-plugin-core';
 import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
 import type { TifyPlugin } from '@projektemacher/tify-plugin-core';
 
@@ -17,6 +22,15 @@ applyStaticTranslations(t, lang);
 const params = new URLSearchParams(window.location.search);
 const input = document.querySelector('#manifest') as HTMLInputElement;
 input.value = params.get('manifest') ?? COOKBOOK_MANIFEST;
+
+// In-viewer toggle for the docked panel (mirrors TIFY's toolbar dock button).
+const toggle = document.querySelector('#toggle-panel');
+if (toggle) {
+  toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${DOCK_ICONS.list}</svg>`;
+  toggle.addEventListener('click', () => {
+    document.querySelector('.tify-plugin-dock-btn')?.dispatchEvent(new MouseEvent('click'));
+  });
+}
 
 let tify: Tify | null = null;
 let plugin: TifyPlugin | null = null;

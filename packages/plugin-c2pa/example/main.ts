@@ -1,10 +1,18 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import Tify from 'tify';
-import { DEFAULT_TRUST_ANCHORS_URL } from '@projektemacher/tify-plugin-c2pa';
-import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
-import { COOKBOOK_MANIFEST, TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
-import { c2paPlugin, type C2paPlugin } from '@projektemacher/tify-plugin-c2pa';
+import {
+  COOKBOOK_MANIFEST,
+  DOCK_ICONS,
+  TIFY_TRANSLATIONS_URL,
+  applyStaticTranslations,
+  createTranslator,
+} from '@projektemacher/tify-plugin-core';
+import {
+  DEFAULT_TRUST_ANCHORS_URL,
+  c2paPlugin,
+  type C2paPlugin,
+} from '@projektemacher/tify-plugin-c2pa';
 
 const params = new URLSearchParams(window.location.search);
 const de = (
@@ -79,4 +87,12 @@ for (const box of [showTrust, editTrust]) {
   });
 }
 
+// In-viewer toggle for the docked panel (mirrors TIFY's toolbar dock button).
+const toggle = document.querySelector('#toggle-panel');
+if (toggle) {
+  toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${DOCK_ICONS.shield}</svg>`;
+  toggle.addEventListener('click', () => {
+    document.querySelector('.tify-plugin-dock-btn')?.dispatchEvent(new MouseEvent('click'));
+  });
+}
 void load(manifestInput.value, trustConfig());

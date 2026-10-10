@@ -6,13 +6,16 @@
   "Annotations": "Annotationen",
   "Annotations — tify-plugins": "Annotationen — tify-plugins",
   "Annotations panel": "Annotationsbereich",
+  "Code example": "Codebeispiel",
   "Could not load annotations": "Annotationen konnten nicht geladen werden",
+  "Documentation": "Dokumentation",
   "IIIF manifest URL": "IIIF-Manifest-URL",
   "Load": "Laden",
   "Loading annotations…": "Annotationen werden geladen …",
   "No annotations on this page": "Keine Annotationen auf dieser Seite",
   "Read-only annotations imported from the IIIF manifest.": "Schreibgeschützte Annotationen aus dem IIIF-Manifest.",
   "Shapes not rendered (WebGL unavailable)": "Formen werden nicht gerendert (WebGL nicht verfügbar)",
+  "Show/hide panel": "Panel ein-/ausblenden",
   "Showing annotations for the first page only": "Nur Annotationen der ersten Seite werden angezeigt",
   "Viewer not ready": "Viewer nicht bereit"
 }

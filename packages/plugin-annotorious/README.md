@@ -28,6 +28,11 @@ const plugin = await annotoriousPlugin(tify, {
 - `@annotorious/openseadragon` is pinned to `~3.8.10`: the 3.9.x line broke
   canvas-click selection (no `clickAnnotation` events, so list rows never
   highlight) — caught by the e2e suite. Re-evaluate on future releases.
+- Shapes are pre-styled for visibility: annotorious paints display shapes on
+  its WebGL canvas (CSS cannot reach them), so the plugin passes a
+  `DrawingStyle` expression — a resting accent tint per annotation and a
+  heavier accent stroke once selected. See the exported `shapeStyle` if you
+  want to customize it.
 - Annotorious coordinates are relative to a single base image: in TIFY book
   view only the first visible page's annotations are shown (noted in the panel).
 

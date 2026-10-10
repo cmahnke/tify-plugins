@@ -30,9 +30,31 @@
         >
       </header>
       <div class="layout">
+        <button
+          type="button"
+          id="toggle-panel"
+          class="panel-toggle"
+          data-i18n-aria="Show/hide panel"
+          aria-label="Show/hide panel"
+          aria-pressed="true"
+        ></button>
         <div id="tify" class="tify-frame"></div>
         <aside id="panel" data-i18n-aria="Provenance panel" aria-label="Provenance panel"></aside>
       </div>
+      <details class="code-example">
+        <summary data-i18n="Code example">Code example</summary>
+        <pre><code>import Tify from 'tify';
+import { c2paPlugin } from '@projektemacher/tify-plugin-c2pa';
+
+const tify = new Tify({ container: '#tify', manifestUrl });
+const plugin = await c2paPlugin(tify, {
+  panelEl: document.querySelector('#panel'),
+  trustAnchors: 'https://contentcredentials.org/trust/anchors.pem',
+});</code></pre>
+        <p class="code-links">
+          <a href="../../../docs/plugin-c2pa.html" data-i18n="Documentation">Documentation</a>
+        </p>
+      </details>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

@@ -19,9 +19,30 @@
         <button id="load" type="button" data-i18n="Load">Load</button>
       </header>
       <div class="layout">
+        <button
+          type="button"
+          id="toggle-panel"
+          class="panel-toggle"
+          data-i18n-aria="Show/hide panel"
+          aria-label="Show/hide panel"
+          aria-pressed="true"
+        ></button>
         <div id="tify" class="tify-frame"></div>
         <aside id="panel" data-i18n-aria="Document panel" aria-label="Document panel"></aside>
       </div>
+      <details class="code-example">
+        <summary data-i18n="Code example">Code example</summary>
+        <pre><code>import Tify from 'tify';
+import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
+
+const tify = new Tify({ container: '#tify', manifestUrl });
+const plugin = await sidePanelPlugin(tify, {
+  panelEl: document.querySelector('#panel'),
+});</code></pre>
+        <p class="code-links">
+          <a href="../../../docs/plugin-side-panel.html" data-i18n="Documentation">Documentation</a>
+        </p>
+      </details>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

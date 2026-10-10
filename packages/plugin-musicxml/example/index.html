@@ -22,9 +22,31 @@
         <button id="load" type="button" data-i18n="Load">Load</button>
       </header>
       <div class="layout">
+        <button
+          type="button"
+          id="toggle-panel"
+          class="panel-toggle"
+          data-i18n-aria="Show/hide panel"
+          aria-label="Show/hide panel"
+          aria-pressed="true"
+        ></button>
         <div id="tify" class="tify-frame"></div>
         <aside id="panel" data-i18n-aria="Score panel" aria-label="Score panel"></aside>
       </div>
+      <details class="code-example">
+        <summary data-i18n="Code example">Code example</summary>
+        <pre><code>import Tify from 'tify';
+import { musicxmlPlugin } from '@projektemacher/tify-plugin-musicxml';
+
+const tify = new Tify({ container: '#tify', manifestUrl });
+const plugin = await musicxmlPlugin(tify, {
+  panelEl: document.querySelector('#panel'),
+  musicxml: 'https://example.org/page.musicxml',
+});</code></pre>
+        <p class="code-links">
+          <a href="../../../docs/plugin-musicxml.html" data-i18n="Documentation">Documentation</a>
+        </p>
+      </details>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

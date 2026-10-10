@@ -20,6 +20,7 @@ import {
   type OpenSeadragonAnnotator,
 } from '@annotorious/openseadragon';
 import '@annotorious/openseadragon/annotorious-openseadragon.css';
+import { shapeStyle } from './shape-style';
 import type Tify from 'tify';
 import {
   getManifest,
@@ -151,7 +152,7 @@ export async function annotoriousPlugin(
   // panel-only mode instead of killing the whole plugin.
   let anno: OpenSeadragonAnnotator | null = null;
   try {
-    anno = createOSDAnnotator(viewer, { drawingEnabled: false });
+    anno = createOSDAnnotator(viewer, { drawingEnabled: false, style: shapeStyle });
     anno.setUserSelectAction(UserSelectAction.SELECT);
   } catch (error) {
     console.debug('[tify-plugins] Annotorious canvas unavailable:', error);

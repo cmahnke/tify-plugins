@@ -158,12 +158,72 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
   gap: var(--gap);
   align-items: start;
+  position: relative;
 }
 
 @media (width <= 60rem) {
   .example .layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* In-viewer panel toggle (docked-panel examples): floating icon button over
+   the viewer's top-right corner, mirroring the TIFY toolbar dock button. */
+.panel-toggle {
+  position: absolute;
+  top: calc(var(--gap) * 0.5);
+  right: calc(var(--gap) * 0.5);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #8883;
+  border-radius: 0.4rem;
+  background: light-dark(#fff, #333);
+  color: inherit;
+  cursor: pointer;
+}
+
+.panel-toggle svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentcolor;
+}
+
+.panel-toggle[aria-pressed='false'] {
+  opacity: 0.75;
+}
+
+/* Code example below the viewer */
+.code-example {
+  margin-top: var(--gap);
+  border: 1px solid #8883;
+  border-radius: 0.4rem;
+}
+
+.code-example summary {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.code-example pre {
+  margin: 0;
+  padding: 0.8rem;
+  overflow: auto;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.code-links {
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  border-top: 1px solid #8883;
+  font-size: 0.85rem;
 }
 
 .tify-frame {
@@ -328,4 +388,11 @@ body {
 
 .tify-plugin-dock-btn.is-bad {
   --tify-plugin-badge-tint: light-dark(#b42318, #f87171);
+}
+
+/* Code example below the viewer (after .tify-plugin-panel code so
+   specificity stays descending) */
+.code-example pre code {
+  background: none;
+  padding: 0;
 }

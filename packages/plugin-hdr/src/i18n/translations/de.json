@@ -3,7 +3,9 @@
   "← all examples": "← alle Beispiele",
   "API version": "API-Version",
   "Canvas HDR: {value}": "HDR-Canvas: {value}",
+  "Code example": "Codebeispiel",
   "Display HDR: {value}": "HDR-Anzeige: {value}",
+  "Documentation": "Dokumentation",
   "HDR": "HDR",
   "HDR — tify-plugins": "HDR — tify-plugins",
   "HDR advertised": "HDR angekündigt",
@@ -23,6 +25,7 @@
   "no": "nein",
   "Profile": "Profil",
   "Service": "Dienst",
+  "Show/hide panel": "Panel ein-/ausblenden",
   "unknown": "unbekannt",
   "Viewer still works (SDR).": "Viewer funktioniert trotzdem (SDR).",
   "yes": "ja"

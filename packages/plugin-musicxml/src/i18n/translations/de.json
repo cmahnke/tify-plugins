@@ -1,6 +1,8 @@
 {
   "$language": "Deutsch",
   "← all examples": "← alle Beispiele",
+  "Code example": "Codebeispiel",
+  "Documentation": "Dokumentation",
   "Dual": "Dual",
   "Flute": "Flöte",
   "IIIF manifest URL": "IIIF-Manifest-URL",
@@ -16,6 +18,7 @@
   "Rendered MusicXML notation, aligned onto the scan, with playback.": "Gerenderte MusicXML-Notation, ausgerichtet auf den Scan, mit Wiedergabe.",
   "Score": "Partitur",
   "Score panel": "Partiturbereich",
+  "Show/hide panel": "Panel ein-/ausblenden",
   "Staff {n}": "System {n}",
   "Stop": "Stopp",
   "Strings": "Streicher",

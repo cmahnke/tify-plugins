@@ -19,6 +19,28 @@ test('docks a Document panel and reports the page status', async ({ page }) => {
   await expect(page.locator('#panel')).toContainText('Mock Book');
 });
 
+test('shows a code example with the panel toggle and docs link', async ({ page }) => {
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  // In-viewer toggle for the docked panel, carrying the plugin glyph.
+  const toggle = page.locator('#toggle-panel');
+  await expect(toggle).toBeVisible();
+  await expect(toggle.locator('svg')).toBeAttached();
+  // Toggle hides and re-shows the docked panel.
+  await expect(page.locator('#panel')).toBeVisible();
+  await toggle.click();
+  await expect(page.locator('#panel')).toBeHidden();
+  await toggle.click();
+  await expect(page.locator('#panel')).toBeVisible();
+  // Code example below the viewer, with a link to the rendered plugin docs.
+  const code = page.locator('details.code-example');
+  await expect(code).toBeVisible();
+  await expect(code).toContainText('sidePanelPlugin');
+  const docsLink = code.locator('a[href="../../../docs/plugin-side-panel.html"]');
+  await expect(docsLink).toBeAttached();
+  await code.locator('summary').click(); // expand → link becomes visible
+  await expect(docsLink).toBeVisible();
+});
+
 test('dock button closes and reopens the panel', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   const dock = page.locator('.tify-plugin-dock-btn');

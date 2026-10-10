@@ -1,7 +1,9 @@
 {
   "$language": "Deutsch",
   "← all examples": "← alle Beispiele",
+  "Code example": "Codebeispiel",
   "Demo marker {index} on page {page} (click to advance)": "Demo-Markierung {index} auf Seite {page} (Klick: weiterblättern)",
+  "Documentation": "Dokumentation",
   "IIIF manifest URL": "IIIF-Manifest-URL",
   "Image overlays": "Bild-Overlays",
   "Image overlays — tify-plugins": "Bild-Overlays — tify-plugins",
