@@ -9,6 +9,9 @@
 // - Annotorious coordinates are relative to ONE base image, so in TIFY book
 //   view only the first visible page's annotations are shown (noted in panel).
 // - Whole-canvas targets, SVG selectors and non-xywh shapes are skipped.
+// - Annotorious renders on WebGL: without a usable context (e.g. headless
+//   browsers without software GL) the plugin degrades to panel-only mode —
+//   the annotation list still works, no canvas shapes are drawn.
 import {
   createOSDAnnotator,
   UserSelectAction,
@@ -48,6 +51,8 @@ export interface AnnotoriousOptions {
 export interface AnnotoriousPlugin extends TifyPlugin {
   refresh(): void;
   count(): number;
+  /** False when the canvas layer is unavailable (no WebGL): panel-only mode. */
+  hasShapes(): boolean;
 }
 
 interface RowEntry {
@@ -60,7 +65,7 @@ function renderRows(
   t: TranslateFn,
   tbody: HTMLTableSectionElement,
   entries: RowEntry[],
-  anno: OpenSeadragonAnnotator,
+  anno: OpenSeadragonAnnotator | null,
 ): void {
   tbody.innerHTML = '';
   if (entries.length === 0) {
@@ -77,19 +82,24 @@ function renderRows(
     const indexCell = document.createElement('td');
     indexCell.textContent = String(index + 1);
     const textCell = document.createElement('td');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'tify-plugin-anno-link';
-    button.textContent = entry.summary;
-    button.addEventListener('click', () => {
-      anno.setSelected(entry.parsed.id);
-      try {
-        anno.fitBounds(entry.parsed.id);
-      } catch {
-        // fitBounds is best effort (depends on shape type).
-      }
-    });
-    textCell.append(button);
+    if (anno) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'tify-plugin-anno-link';
+      button.textContent = entry.summary;
+      button.addEventListener('click', () => {
+        anno.setSelected(entry.parsed.id);
+        try {
+          anno.fitBounds(entry.parsed.id);
+        } catch {
+          // fitBounds is best effort (depends on shape type).
+        }
+      });
+      textCell.append(button);
+    } else {
+      // Panel-only mode: no canvas layer, nothing to select or zoom.
+      textCell.textContent = entry.summary;
+    }
     row.append(indexCell, textCell);
     tbody.append(row);
     entry.row = row;
@@ -133,8 +143,17 @@ export async function annotoriousPlugin(
   const viewer = tify.viewer;
   if (!viewer) throw new Error(t('Viewer not ready'));
 
-  const anno = createOSDAnnotator(viewer, { drawingEnabled: false });
-  anno.setUserSelectAction(UserSelectAction.SELECT);
+  // Annotorious draws on a WebGL canvas; init fails hard without a usable
+  // context (e.g. headless Firefox without software GL). Degrade to
+  // panel-only mode instead of killing the whole plugin.
+  let anno: OpenSeadragonAnnotator | null = null;
+  try {
+    anno = createOSDAnnotator(viewer, { drawingEnabled: false });
+    anno.setUserSelectAction(UserSelectAction.SELECT);
+  } catch (error) {
+    console.debug('[tify-plugins] Annotorious canvas unavailable:', error);
+    anno = null;
+  }
   // W3C adapter: parses IIIF xywh fragment targets into shapes natively.
   const w3c = W3CImageFormat('iiif');
 
@@ -146,6 +165,16 @@ export async function annotoriousPlugin(
     tbody = document.createElement('tbody');
     table.append(tbody);
     panel.body.append(table);
+    if (!anno) {
+      // Make the degradation visible (and testable).
+      const note = document.createElement('p');
+      note.className = 'tify-plugin-note';
+      note.textContent = t('Shapes not rendered (WebGL unavailable)');
+      panel.body.append(note);
+      panel.root.dataset.shapes = 'off';
+    } else {
+      panel.root.dataset.shapes = 'on';
+    }
   }
 
   const sync = async (): Promise<void> => {
@@ -179,9 +208,9 @@ export async function annotoriousPlugin(
         }
       });
       // Swap rendered state only once the replacement is ready.
-      anno.clearAnnotations();
+      anno?.clearAnnotations();
       entries = next;
-      anno.setAnnotations(parsed, true);
+      anno?.setAnnotations(parsed, true);
       if (tbody) {
         tbody.innerHTML = '';
         renderRows(t, tbody, entries, anno);
@@ -199,24 +228,25 @@ export async function annotoriousPlugin(
   const onClick = (annotation: ImageAnnotation): void => {
     highlight(entries, annotation?.id ?? null);
   };
-  anno.on('clickAnnotation', onClick);
+  anno?.on('clickAnnotation', onClick);
   const unsubscribe = onPagesChange(tify, () => void sync());
   await sync();
 
   return {
     refresh: () => void sync(),
     count: () => entries.length,
+    hasShapes: () => anno !== null,
     destroy() {
       disposed = true;
       unsubscribe();
       dock?.destroy();
       try {
-        anno.off('clickAnnotation', onClick);
+        anno?.off('clickAnnotation', onClick);
       } catch {
         // Ignore teardown races.
       }
       try {
-        anno.destroy();
+        anno?.destroy();
       } catch {
         // Viewer may already be gone.
       }
