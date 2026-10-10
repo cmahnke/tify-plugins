@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@projektemacher/tify-plugin-core": "^0.1.0",
-    "@contentauth/c2pa-web": "^0.14.6"
+    "@contentauth/c2pa-web": "^0.15.3"
   },
   "peerDependencies": {
     "tify": "0.36.2"
