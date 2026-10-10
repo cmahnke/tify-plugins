@@ -20,7 +20,7 @@ test(`checks viewport tiles and reports unsigned provenance`, async ({ page }, t
   );
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toContainText('Provenance');
-  await dock.click();
+  // Panels auto-open after init.
   await expect(page.locator('#panel')).toBeVisible();
   await expect(page.locator('#panel h2')).toHaveText('Provenance');
   await expect(page.locator('.tify-plugin-service-line')).toHaveText(

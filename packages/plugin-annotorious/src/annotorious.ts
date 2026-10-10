@@ -46,6 +46,8 @@ export interface AnnotoriousOptions {
    * true: dock or throw. false: never dock. Ignored without panelEl.
    */
   dock?: boolean | 'auto';
+  /** Open the docked panel after init (default true). */
+  autoOpen?: boolean;
 }
 
 export interface AnnotoriousPlugin extends TifyPlugin {
@@ -139,6 +141,7 @@ export async function annotoriousPlugin(
           mode: options.dock,
         })
       : null;
+  if (options.autoOpen !== false) dock?.open();
 
   const viewer = tify.viewer;
   if (!viewer) throw new Error(t('Viewer not ready'));
@@ -226,6 +229,9 @@ export async function annotoriousPlugin(
   };
 
   const onClick = (annotation: ImageAnnotation): void => {
+    // Clicking a shape only gives visible feedback when the list panel is
+    // open — reopen a manually closed dock so the highlight is seen.
+    if (panel && dock && !dock.isOpen()) dock.open();
     highlight(entries, annotation?.id ?? null);
   };
   anno?.on('clickAnnotation', onClick);

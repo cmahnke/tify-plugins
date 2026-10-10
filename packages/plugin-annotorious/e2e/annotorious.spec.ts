@@ -89,6 +89,38 @@ test('clicking a canvas shape highlights its list row', async ({ page }) => {
     .toContain('is-active');
 });
 
+test('clicking a shape reopens a manually closed panel', async ({ page }) => {
+  test.setTimeout(90_000);
+  if (!(await webglAvailable(page))) {
+    test.skip(true, 'no WebGL: annotorious cannot draw shapes');
+  }
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  const dock = page.locator('.tify-plugin-dock-btn');
+  // Panels auto-open; close it manually, then the shape must bring it back.
+  await expect(dock).toHaveAttribute('aria-expanded', 'true');
+  await dock.click();
+  await expect(page.locator('#panel')).toBeHidden();
+  const row = page.locator('#panel tbody tr').first();
+  await expect(page.locator('.tify-loading')).toBeHidden({ timeout: 15_000 });
+  await expect
+    .poll(
+      async () => {
+        const point = await imageToElement(page, ANNO_CENTER.x, ANNO_CENTER.y);
+        await page.mouse.move(point.x, point.y, { steps: 5 });
+        await page.waitForTimeout(1000);
+        await page.mouse.down();
+        await page.mouse.up();
+        await page.waitForTimeout(500);
+        return row.evaluate((element) => element.className);
+      },
+      { timeout: 60_000 },
+    )
+    .toContain('is-active');
+  // The click reopens the dock so the highlight is actually visible.
+  await expect(dock).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#panel')).toBeVisible();
+});
+
 test('clicking a list row zooms the viewer to the annotation', async ({ page }) => {
   if (!(await webglAvailable(page))) {
     test.skip(true, 'no WebGL: annotorious cannot draw shapes');
@@ -100,7 +132,7 @@ test('clicking a list row zooms the viewer to the annotation', async ({ page }) 
   const transform = page.locator('.a9s-annotationlayer > g').first();
   await expect(transform).toBeAttached();
   const before = await transform.getAttribute('transform');
-  await page.locator('.tify-plugin-dock-btn').click();
+  // Panels auto-open after init — no dock click needed.
   await expect(page.locator('#panel')).toBeVisible();
   await page.locator('#panel tbody tr button').first().click();
   await expect

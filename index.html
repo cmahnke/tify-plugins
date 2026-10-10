@@ -7,63 +7,104 @@
   </head>
   <body>
     <main class="catalog">
-      <h1>tify-plugins</h1>
-      <p>
-        <span data-i18n="Example plugins for the TIFY IIIF viewer."
-          >Example plugins for the TIFY IIIF viewer.</span
-        >
-        <a href="https://tify.rocks/">tify.rocks</a>
-      </p>
-      <ul>
-        <li>
-          <a href="./packages/core/example/" data-i18n="Basic embed — minimal TIFY setup"
-            >Basic embed — minimal TIFY setup</a
-          >
+      <header class="catalog-header">
+        <div>
+          <h1>tify-plugins</h1>
+          <p>
+            <span
+              data-i18n="Modular plugins for the TIFY IIIF viewer — annotations, overlays, HDR status, C2PA provenance and score playback, docking straight into the viewer chrome."
+              >Modular plugins for the TIFY IIIF viewer — annotations, overlays, HDR status, C2PA
+              provenance and score playback, docking straight into the viewer chrome.</span
+            >
+            <a href="https://tify.rocks/">tify.rocks</a>
+          </p>
+        </div>
+        <nav class="lang-switch" data-i18n-aria="Language" aria-label="Language">
+          <button type="button" data-lang="en" class="lang-btn">EN</button>
+          <button type="button" data-lang="de" class="lang-btn">DE</button>
+        </nav>
+      </header>
+      <ul class="cards" id="cards">
+        <li class="card">
+          <a href="./packages/core/example/">
+            <h2 data-i18n="Basic embed">Basic embed</h2>
+            <p data-i18n="Load any IIIF manifest and see TIFY in action.">
+              Load any IIIF manifest and see TIFY in action.
+            </p>
+          </a>
         </li>
-        <li>
-          <a
-            href="./packages/plugin-side-panel/example/"
-            data-i18n="Side panel — custom metadata panel beside the viewer"
-            >Side panel — custom metadata panel beside the viewer</a
-          >
+        <li class="card">
+          <a href="./packages/plugin-side-panel/example/">
+            <h2 data-i18n="Side panel">Side panel</h2>
+            <p
+              data-i18n="Custom metadata panel: document title, page count, page status and prev/next/thumbnails controls — docks into the viewer header."
+            >
+              Custom metadata panel: document title, page count, page status and
+              prev/next/thumbnails controls — docks into the viewer header.
+            </p>
+          </a>
         </li>
-        <li>
-          <a
-            href="./packages/plugin-image-overlays/example/"
-            data-i18n="Image overlays — OpenSeadragon overlays synced to pages"
-            >Image overlays — OpenSeadragon overlays synced to pages</a
-          >
+        <li class="card">
+          <a href="./packages/plugin-image-overlays/example/">
+            <h2 data-i18n="Image overlays">Image overlays</h2>
+            <p data-i18n="OpenSeadragon overlays synced to pages — TEI word boxes or demo markers.">
+              OpenSeadragon overlays synced to pages — TEI word boxes or demo markers.
+            </p>
+          </a>
         </li>
-        <li>
-          <a
-            href="./packages/plugin-annotorious/example/"
-            data-i18n="Annotations — read-only IIIF annotations with Annotorious"
-            >Annotations — read-only IIIF annotations with Annotorious</a
-          >
+        <li class="card">
+          <a href="./packages/plugin-annotorious/example/">
+            <h2 data-i18n="Annotations">Annotations</h2>
+            <p
+              data-i18n="Display-only IIIF annotations rendered as shapes, with a linked list panel."
+            >
+              Display-only IIIF annotations rendered as shapes, with a linked list panel.
+            </p>
+          </a>
         </li>
-        <li>
-          <a
-            href="./packages/plugin-hdr/example/"
-            data-i18n="HDR — HDR canvas status and image service check"
-            >HDR — HDR canvas status and image service check</a
-          >
+        <li class="card">
+          <a href="./packages/plugin-hdr/example/">
+            <h2 data-i18n="HDR">HDR</h2>
+            <p data-i18n="HDR capability status and image service check with a tinted dock button.">
+              HDR capability status and image service check with a tinted dock button.
+            </p>
+          </a>
         </li>
-        <li>
-          <a
-            href="./packages/plugin-c2pa/example/"
-            data-i18n="C2PA — per-tile provenance and trust anchors"
-            >C2PA — per-tile provenance and trust anchors</a
-          >
+        <li class="card">
+          <a href="./packages/plugin-c2pa/example/">
+            <h2 data-i18n="C2PA provenance">C2PA provenance</h2>
+            <p data-i18n="Per-tile C2PA provenance for the live viewport with a trust-anchor form.">
+              Per-tile C2PA provenance for the live viewport with a trust-anchor form.
+            </p>
+          </a>
         </li>
-        <li>
-          <a
-            href="./packages/plugin-musicxml/example/"
-            data-i18n="MusicXML — rendered score with playback"
-            >MusicXML — rendered score with playback</a
-          >
+        <li class="card">
+          <a href="./packages/plugin-musicxml/example/">
+            <h2 data-i18n="MusicXML score">MusicXML score</h2>
+            <p
+              data-i18n="Rendered MusicXML notation aligned onto the scan, with Web Audio playback."
+            >
+              Rendered MusicXML notation aligned onto the scan, with Web Audio playback.
+            </p>
+          </a>
         </li>
-        <li><a href="./docs/" data-i18n="Documentation">Documentation</a></li>
+        <li class="card">
+          <a href="./docs/">
+            <h2 data-i18n="Documentation">Documentation</h2>
+            <p data-i18n="Rendered READMEs for the monorepo and every package.">
+              Rendered READMEs for the monorepo and every package.
+            </p>
+          </a>
+        </li>
       </ul>
+      <footer class="catalog-footer">
+        <a href="https://github.com/cmahnke/tify-plugins" data-i18n="Source on GitHub"
+          >Source on GitHub</a
+        >
+        ·
+        <a href="https://tify.rocks/" data-i18n="TIFY IIIF viewer">TIFY IIIF viewer</a>
+        · <span data-i18n="AGPL-3.0-or-later">AGPL-3.0-or-later</span>
+      </footer>
     </main>
     <script type="module" src="./src/main.ts"></script>
   </body>

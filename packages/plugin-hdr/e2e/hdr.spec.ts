@@ -21,7 +21,7 @@ test('reports capability status and an HDR-advertising image service', async ({ 
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toContainText('HDR');
   await expect(dock).toHaveAttribute('title', /Display HDR: (yes|no)/);
-  await dock.click();
+  // Panels auto-open after init.
   await expect(page.locator('#panel')).toBeVisible();
   await expect(page.locator('#panel h2')).toHaveText('HDR');
   await expect(page.locator('#panel .pill')).toHaveText('HDR advertised');

@@ -20,6 +20,8 @@ export interface SidePanelOptions {
    * true: dock or throw. false: never dock.
    */
   dock?: boolean | 'auto';
+  /** Open the docked panel after init (default true). */
+  autoOpen?: boolean;
 }
 
 function getManifestLabel(manifest: any): string {
@@ -47,6 +49,7 @@ export async function sidePanelPlugin(tify: Tify, options: SidePanelOptions): Pr
     contentEl: options.panelEl,
     mode: options.dock,
   });
+  if (options.autoOpen !== false) dock?.open();
 
   const render = async (): Promise<void> => {
     const pages = getPages(tify).filter((page) => page > 0);

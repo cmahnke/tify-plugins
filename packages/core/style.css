@@ -19,9 +19,97 @@ body {
 }
 
 .catalog {
-  max-width: 48rem;
+  max-width: 60rem;
   margin: 0 auto;
 }
+
+/* Catalog header: title + tagline + language switcher */
+.catalog-header {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+  justify-content: space-between;
+  margin-bottom: var(--gap);
+}
+
+.catalog-header h1 {
+  margin: 0 0 0.35rem;
+}
+
+.catalog-header p {
+  margin: 0;
+  max-width: 42rem;
+  opacity: 0.9;
+}
+
+.lang-switch {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid #8883;
+  border-radius: 0.4rem;
+  overflow: hidden;
+}
+
+.lang-btn {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.lang-btn[aria-pressed='true'] {
+  background: light-dark(#06b, #4c9aff);
+  color: #fff;
+}
+
+/* Example cards grid */
+.cards {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--gap);
+  padding: 0;
+  margin: 0 0 var(--gap);
+}
+
+.card a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  height: 100%;
+  padding: 0.9rem;
+  border: 1px solid #8883;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.card a:hover {
+  border-color: light-dark(#06b, #4c9aff);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: light-dark(#06b, #4c9aff);
+}
+
+.card p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.catalog-footer {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Example chrome */
 
 .example header.controls {
   display: flex;
@@ -182,24 +270,20 @@ body {
   background: rgb(11 95 255 / 32%);
 }
 
-/* Docked panels inside .tify-main + header-button-style badges/buttons */
-.tify-main.tify-plugin-has-dock {
-  flex-wrap: wrap;
-}
-
+/* Docked panels inside .tify-main + header-button-style badges/buttons.
+   NB: TIFY lays out its view sections (including .tify-media) absolutely
+   over .tify-main, so a docked panel can never sit *beside* the media as a
+   flex sibling — it would stretch over the whole media area and swallow the
+   viewer's clicks. Docked panels are therefore always a right-side overlay
+   (the pattern TIFY itself uses for panels on small screens). */
 .tify-plugin-dock {
-  flex: 1 1 18rem;
-  min-width: 16rem;
-  max-width: 100%;
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  z-index: 6;
+  width: min(22rem, 94%);
+  max-width: none;
   overflow: auto;
-
-  /* Stack above the OSD canvas (z-index: 0), which is absolutely positioned
-     over .tify-main and would otherwise swallow the panel's clicks. */
-  position: relative;
-  z-index: 1;
-}
-
-.tify-main .tify-plugin-panel {
   background: var(
     --tify-bg-color,
     light-dark(
@@ -210,45 +294,15 @@ body {
       )
     )
   );
-  border: 0;
-  border-left: 1px solid
-    var(
-      --tify-border-color,
-      light-dark(
-        oklch(from var(--tify-base-color, #06b) calc(l / 2) calc(c * 0.1) h / 15%),
-        oklch(
-          from
-            var(--tify-base-color-dark, oklch(from var(--tify-base-color, #06b) calc(l * 1.5) c h))
-            calc(l * 2) calc(c * 0.1) h / 15%
-        )
-      )
-    );
-  border-radius: 0;
-  max-height: none;
+  border-left: 0;
+  box-shadow: -4px 0 12px rgb(0 0 0 / 25%);
 }
 
-@media (width <= 719px) {
-  .tify-plugin-dock {
-    position: absolute;
-    inset-block: 0;
-    right: 0;
-    z-index: 6;
-    width: min(22rem, 94%);
-    max-width: none;
-    background: var(
-      --tify-bg-color,
-      light-dark(
-        #fff,
-        oklch(
-          from
-            var(--tify-base-color-dark, oklch(from var(--tify-base-color, #06b) calc(l * 1.5) c h))
-            calc(l / 4) calc(c / 20) h
-        )
-      )
-    );
-    border-left: 0;
-    box-shadow: -4px 0 12px rgb(0 0 0 / 25%);
-  }
+.tify-main .tify-plugin-panel {
+  border: 0;
+  border-left: 0;
+  border-radius: 0;
+  max-height: none;
 }
 
 .tify-header-button.tify-plugin-dock-btn {

@@ -134,9 +134,10 @@ async function oscStarts(page: Page): Promise<Array<{ t: number; f: number; w: s
   );
 }
 
-/** Open the docked panel and wait for the player controls. */
+/** Ensure the docked panel is open (auto-open makes it open initially) and wait for the player controls. */
 async function openPlayer(page: Page): Promise<void> {
-  await page.locator('.tify-plugin-dock-btn').click();
+  const dock = page.locator('.tify-plugin-dock-btn');
+  if ((await dock.getAttribute('aria-expanded')) !== 'true') await dock.click();
   await expect(page.locator('#panel')).toBeVisible();
   await expect(page.locator('.player-controls')).toBeVisible({ timeout: 30_000 });
 }

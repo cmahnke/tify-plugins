@@ -56,6 +56,8 @@ export interface C2paOptions {
    * true: dock or throw. false: never dock.
    */
   dock?: boolean | 'auto';
+  /** Open the docked panel after init (default true). */
+  autoOpen?: boolean;
   /**
    * Trust-anchor setup. String/null shorthand preserves the classic call:
    * shown and editable. Use the object form to hide or lock the URL:
@@ -216,6 +218,7 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
     contentEl: options.panelEl,
     mode: options.dock,
   });
+  if (options.autoOpen !== false) dock?.open();
 
   const paintBadge = (valid: boolean | null, title: string): void => {
     if (!dock) return;

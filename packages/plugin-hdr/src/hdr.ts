@@ -36,6 +36,8 @@ export interface HdrOptions {
    * true: dock or throw. false: never dock.
    */
   dock?: boolean | 'auto';
+  /** Open the docked panel after init (default true). */
+  autoOpen?: boolean;
 }
 
 export interface HdrPlugin extends TifyPlugin {
@@ -152,6 +154,7 @@ export async function hdrPlugin(tify: Tify, options: HdrOptions): Promise<HdrPlu
     contentEl: options.panelEl,
     mode: options.dock,
   });
+  if (options.autoOpen !== false) dock?.open();
 
   const paintTint = (): void => {
     if (!dock) return;

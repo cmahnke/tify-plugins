@@ -12,25 +12,28 @@ test('docks a Document panel and reports the page status', async ({ page }) => {
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toHaveCount(1);
   await expect(dock).toContainText('Document');
-  // Docked panels start closed; the status is still in the DOM.
+  // Panels auto-open after init: the plugin UI is visible out of the box.
+  await expect(dock).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#panel')).toBeVisible();
   await expect(page.locator('.tify-plugin-status')).toHaveText('Viewing page 1');
   await expect(page.locator('#panel')).toContainText('Mock Book');
 });
 
-test('dock button opens and closes the panel', async ({ page }) => {
+test('dock button closes and reopens the panel', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toHaveCount(1);
+  await expect(dock).toHaveAttribute('aria-expanded', 'true');
+  await dock.click();
+  await expect(dock).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#panel')).toBeHidden();
   await dock.click();
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('#panel')).toBeVisible();
-  await dock.click();
-  await expect(dock).toHaveAttribute('aria-expanded', 'false');
 });
 
 test('prev/next buttons navigate pages', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await page.locator('.tify-plugin-dock-btn').click();
   const status = page.locator('.tify-plugin-status');
   await expect(status).toHaveText('Viewing page 1');
   await page.getByRole('button', { name: 'Next →' }).click();
@@ -42,7 +45,6 @@ test('prev/next buttons navigate pages', async ({ page }) => {
 test('thumbnails button hands the view back to TIFY and closes the dock', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   const dock = page.locator('.tify-plugin-dock-btn');
-  await dock.click();
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
   await page.getByRole('button', { name: 'Thumbnails' }).click();
   await expect(dock).toHaveAttribute('aria-expanded', 'false', { timeout: 5000 });

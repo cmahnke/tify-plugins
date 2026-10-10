@@ -37,6 +37,8 @@ export interface MusicXmlOptions {
    * true: dock or throw. false: never dock.
    */
   dock?: boolean | 'auto';
+  /** Open the docked panel after init (default true). */
+  autoOpen?: boolean;
   /** MusicXML override: absolute URL or raw XML. Defaults to the canvas `rendering`. */
   musicxml?: string;
   /** Render the aligned score onto the scan (default true). */
@@ -342,6 +344,7 @@ export async function musicxmlPlugin(
     contentEl: options.panelEl,
     mode: options.dock,
   });
+  if (options.autoOpen !== false) dock?.open();
 
   let disposed = false;
   let unsubscribe: (() => void) | null = null;
