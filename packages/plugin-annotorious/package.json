@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@projektemacher/tify-plugin-core": "^0.1.0",
-    "@annotorious/openseadragon": "^3.8.10"
+    "@annotorious/openseadragon": "^3.9.4"
   },
   "peerDependencies": {
     "tify": "0.36.2"
