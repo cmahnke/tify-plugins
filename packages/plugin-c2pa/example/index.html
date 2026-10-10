@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="C2PA — tify-plugins">C2PA — tify-plugins</title>
+  </head>
+  <body>
+    <main class="example">
+      <p><a href="../../../" data-i18n="← all examples">← all examples</a></p>
+      <h1 data-i18n="C2PA provenance">C2PA provenance</h1>
+      <p data-i18n="Per-tile provenance for the current viewport.">
+        Per-tile provenance for the current viewport.
+      </p>
+      <header class="controls">
+        <input
+          id="manifest"
+          type="url"
+          data-i18n-aria="IIIF manifest URL"
+          aria-label="IIIF manifest URL"
+        />
+        <button id="load-manifest" type="button" data-i18n="Load manifest">Load manifest</button>
+        <label
+          ><input id="show-trust" type="checkbox" checked />
+          <span data-i18n="Show trust anchor URL">Show trust anchor URL</span></label
+        >
+        <label
+          ><input id="edit-trust" type="checkbox" checked />
+          <span data-i18n="Trust anchor URL editable">Trust anchor URL editable</span></label
+        >
+      </header>
+      <div class="layout">
+        <div id="tify" class="tify-frame"></div>
+        <aside id="panel" data-i18n-aria="Provenance panel" aria-label="Provenance panel"></aside>
+      </div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

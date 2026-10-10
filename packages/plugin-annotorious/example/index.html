@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="Annotations — tify-plugins">Annotations — tify-plugins</title>
+  </head>
+  <body>
+    <main class="example">
+      <p><a href="../../../" data-i18n="← all examples">← all examples</a></p>
+      <h1 data-i18n="Annotations">Annotations</h1>
+      <p data-i18n="Read-only annotations imported from the IIIF manifest.">
+        Read-only annotations imported from the IIIF manifest.
+      </p>
+      <header class="controls">
+        <input
+          id="manifest"
+          type="url"
+          data-i18n-aria="IIIF manifest URL"
+          aria-label="IIIF manifest URL"
+        />
+        <button id="load" type="button" data-i18n="Load">Load</button>
+      </header>
+      <div class="layout">
+        <div id="tify" class="tify-frame"></div>
+        <aside id="panel" data-i18n-aria="Annotations panel" aria-label="Annotations panel"></aside>
+      </div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "$language": "Deutsch",
+  "Annotations — read-only IIIF annotations with Annotorious": "Annotationen — schreibgeschützte IIIF-Annotationen mit Annotorious",
+  "Basic embed — minimal TIFY setup": "Einfache Einbettung — minimales TIFY-Setup",
+  "C2PA — per-tile provenance and trust anchors": "C2PA — Provenienz pro Kachel und Vertrauensanker",
+  "Documentation": "Dokumentation",
+  "Example plugins for the TIFY IIIF viewer.": "Beispiel-Plugins für den IIIF-Viewer TIFY.",
+  "HDR — HDR canvas status and image service check": "HDR — HDR-Canvas-Status und Bilddienst-Prüfung",
+  "Image overlays — OpenSeadragon overlays synced to pages": "Bild-Overlays — OpenSeadragon-Overlays synchron zum Seitenwechsel",
+  "MusicXML — rendered score with playback": "MusicXML — gerenderte Partitur mit Wiedergabe",
+  "Side panel — custom metadata panel beside the viewer": "Seitenleiste — eigenes Metadaten-Panel neben dem Viewer",
+  "tify-plugins — examples": "tify-plugins — Beispiele"
+}

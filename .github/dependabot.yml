@@ -1,0 +1,16 @@
+# One npm entry covers the whole workspace (root + packages/*).
+# Each module still gets its own lint status via the CI matrix.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: typescript
+        versions:
+          - '>= 7'
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

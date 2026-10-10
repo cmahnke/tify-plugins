@@ -1,0 +1,17 @@
+{
+  "$language": "Deutsch",
+  "{canvases} canvases": "{canvases} Canvases",
+  "← all examples": "← alle Beispiele",
+  "← Previous": "← Vorige",
+  "Document": "Dokument",
+  "Document panel": "Dokumentbereich",
+  "IIIF manifest URL": "IIIF-Manifest-URL",
+  "Load": "Laden",
+  "Loading…": "Wird geladen …",
+  "Next →": "Weiter →",
+  "Side panel": "Seitenleiste",
+  "Side panel — tify-plugins": "Seitenleiste — tify-plugins",
+  "Thumbnails": "Miniaturansichten",
+  "Viewing page {pages}": "Seite {pages} wird angezeigt",
+  "Viewing pages {pages}": "Seiten {pages} werden angezeigt"
+}

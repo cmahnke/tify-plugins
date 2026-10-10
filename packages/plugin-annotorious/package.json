@@ -1,0 +1,57 @@
+{
+  "name": "@projektemacher/tify-plugin-annotorious",
+  "version": "0.1.0",
+  "description": "Display-only Annotorious annotations plugin for the TIFY IIIF viewer",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://tify.rocks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/projektemacher/tify-plugins.git",
+    "directory": "packages/plugin-annotorious"
+  },
+  "keywords": [
+    "iiif",
+    "tify",
+    "viewer",
+    "plugin",
+    "annotation",
+    "annotorious"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./annotorious.css": "./dist/index.css"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test:i18n": "node ../../scripts/check-i18n.js .",
+    "test:e2e": "playwright test",
+    "lint": "eslint . && prettier --check src example e2e package.json README.md"
+  },
+  "dependencies": {
+    "@projektemacher/tify-plugin-core": "^0.1.0",
+    "@annotorious/openseadragon": "^3.8.10"
+  },
+  "peerDependencies": {
+    "tify": "0.36.2"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0"
+  }
+}

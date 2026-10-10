@@ -1,0 +1,88 @@
+# Per-module lint + i18n coverage (each publishable workspace gets its own
+# status check), repo-wide typecheck/TEI/build/docs, and the Playwright e2e
+# browser matrix. Reusable: pages.yml and publish.yml gate on this workflow.
+name: CI
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+  workflow_call:
+
+jobs:
+  lint:
+    name: lint (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - core
+          - side-panel
+          - image-overlays
+          - hdr
+          - c2pa
+          - annotorious
+          - musicxml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint --workspace @projektemacher/tify-plugin-${{ matrix.package }}
+      - run: npm run test:i18n --workspace @projektemacher/tify-plugin-${{ matrix.package }}
+
+  app:
+    name: demo app (lint, typecheck, i18n, tei, build, docs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:i18n
+      - run: npm run test:tei --workspace @projektemacher/tify-plugin-image-overlays
+      - run: npm run test:timeline --workspace @projektemacher/tify-plugin-musicxml
+      - run: npm run build
+      - run: npm run docs
+
+  e2e:
+    name: e2e (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser:
+          - chromium
+          - firefox
+          - webkit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:e2e --workspaces --if-present -- --project=${{ matrix.browser }}
+        env:
+          E2E_PREVIEW: '1'
+      - run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          E2E_PREVIEW: '1'
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: |
+            playwright-report/
+            packages/*/playwright-report/
+          retention-days: 7

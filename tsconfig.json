@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@projektemacher/tify-plugin-core": ["./packages/core/src/index.ts"],
+      "@projektemacher/tify-plugin-side-panel": ["./packages/plugin-side-panel/src/index.ts"],
+      "@projektemacher/tify-plugin-image-overlays": [
+        "./packages/plugin-image-overlays/src/index.ts"
+      ],
+      "@projektemacher/tify-plugin-hdr": ["./packages/plugin-hdr/src/index.ts"],
+      "@projektemacher/tify-plugin-c2pa": ["./packages/plugin-c2pa/src/index.ts"],
+      "@projektemacher/tify-plugin-annotorious": ["./packages/plugin-annotorious/src/index.ts"],
+      "@projektemacher/tify-plugin-musicxml": ["./packages/plugin-musicxml/src/index.ts"]
+    }
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "vite.lib.ts",
+    "playwright.config.ts",
+    "playwright.shared.ts",
+    "scripts/check-i18n.js",
+    "scripts/build-docs.mjs",
+    "e2e",
+    "packages/*/src",
+    "packages/*/example",
+    "packages/*/e2e",
+    "packages/*/vite.config.ts"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "$language": "Deutsch",
+  "← all examples": "← alle Beispiele",
+  "Demo marker {index} on page {page} (click to advance)": "Demo-Markierung {index} auf Seite {page} (Klick: weiterblättern)",
+  "IIIF manifest URL": "IIIF-Manifest-URL",
+  "Image overlays": "Bild-Overlays",
+  "Image overlays — tify-plugins": "Bild-Overlays — tify-plugins",
+  "Load": "Laden",
+  "With a TEI transcription linked via seeAlso, word boxes are shown. Otherwise, click a marker to advance one page.": "Mit einer per seeAlso verknüpften TEI-Transkription werden Wortboxen angezeigt. Sonst blättert ein Klick auf eine Markierung eine Seite weiter."
+}

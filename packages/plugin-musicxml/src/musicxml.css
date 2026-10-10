@@ -1,0 +1,100 @@
+/* OSD wraps each overlay element in a positioned div; keep it click-through
+   so pan/zoom on the image is never blocked by a full-page overlay. */
+.openseadragon-overlay-wrapper {
+  pointer-events: none;
+}
+
+.staff-overlay {
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Player controls (live in the docked panel). */
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.player-btn {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.9rem;
+}
+
+.player-tempo {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  margin-left: 0.5rem;
+}
+
+.player-controls input[type='range'] {
+  width: 90px;
+}
+
+.player-track,
+.player-track2,
+.player-instrument,
+.player-dual {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.25rem;
+}
+
+.player-dual {
+  cursor: pointer;
+}
+
+/* Track 2 controls, revealed by the dual-playback checkbox. */
+.player-track-b {
+  display: none;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.player-dual:checked ~ .player-track-b {
+  display: inline-flex;
+}
+
+.player-controls.single-track .player-dual,
+.player-controls.single-track .player-track-b {
+  display: none;
+}
+
+.player-error {
+  color: #b42318;
+}
+
+/* OSMD score overlaid on the scan (page-pixel viewBox svg; each system is a
+   nested <svg> mapped onto its staff region). */
+.score-overlay {
+  pointer-events: none;
+  z-index: 1;
+}
+
+.score-system-bg {
+  fill: rgb(255 255 255 / 75%);
+}
+
+/* Scan overlay highlight layers (page-pixel viewBox). NB: their visibility
+   is controlled by the visibility ATTRIBUTE from JS — a CSS visibility rule
+   here would override the attribute (CSS beats presentation attributes) and
+   permanently hide the layers. */
+.staff-current {
+  fill: rgb(0 140 255 / 25%);
+  stroke: rgb(0 140 255 / 90%);
+}
+
+.note-marker {
+  fill: rgb(255 0 80 / 40%);
+  stroke: rgb(255 0 80 / 95%);
+}
+
+/* Bold vertical playhead at the current note's x; the stroke width is set
+   per element in page units (proportional to the staff size). */
+.play-pos {
+  stroke: rgb(220 0 70 / 90%);
+  stroke-linecap: round;
+}

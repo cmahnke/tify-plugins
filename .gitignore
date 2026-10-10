@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Scratch space
+.tmp/
+
+# Vite / Vitest caches
+.vite/
+*.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+
+# Test coverage
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Env files (examples use URL params instead)
+.env
+.env.*
+!.env.example
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local overrides
+*.local

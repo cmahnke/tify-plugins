@@ -1,0 +1,52 @@
+{
+  "name": "@projektemacher/tify-plugin-core",
+  "version": "0.1.0",
+  "description": "Shared core for TIFY viewer plugins: plugin contract, i18n, IIIF helpers, dock-in-viewer, styles",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "homepage": "https://tify.rocks/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/projektemacher/tify-plugins.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "iiif",
+    "tify",
+    "viewer",
+    "plugin"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./style.css"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "style.css"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test:i18n": "node ../../scripts/check-i18n.js .",
+    "test:e2e": "playwright test",
+    "lint": "eslint . && stylelint \"style.css\" && prettier --check src example e2e package.json README.md style.css"
+  },
+  "peerDependencies": {
+    "tify": "0.36.2"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0"
+  }
+}

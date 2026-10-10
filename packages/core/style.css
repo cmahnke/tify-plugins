@@ -1,0 +1,277 @@
+:root {
+  color-scheme: light dark;
+
+  --gap: 1rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  margin: 0;
+  padding: 1rem;
+}
+
+.catalog {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.example header.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: var(--gap);
+}
+
+.tify-plugin-trust-form input,
+.example header.controls input[type='url'],
+.example header.controls input[type='text'] {
+  flex: 1 1 24rem;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+}
+
+.tify-plugin-trust-form button,
+.example header.controls button {
+  padding: 0.4rem 0.8rem;
+}
+
+.tify-plugin-note {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.tify-plugin-trust-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: end;
+  margin-bottom: 0.6rem;
+}
+
+.tify-plugin-trust-form label {
+  flex: 1 1 12rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.example .layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: var(--gap);
+  align-items: start;
+}
+
+@media (width <= 60rem) {
+  .example .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tify-frame {
+  height: 70vh;
+  min-height: 24rem;
+  border: 1px solid #8883;
+}
+
+.tify-plugin-panel {
+  border: 1px solid #8883;
+  border-radius: 0.4rem;
+  padding: 0.8rem;
+  font-size: 0.9rem;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.tify-plugin-panel h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.tify-plugin-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.tify-plugin-panel th,
+.tify-plugin-panel td {
+  text-align: left;
+  padding: 0.25rem 0.3rem;
+  border-bottom: 1px solid #8883;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.tify-plugin-panel .pill {
+  display: inline-block;
+  border-radius: 1rem;
+  padding: 0.05rem 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tify-plugin-panel .pill.is-valid {
+  background: #1a7f37;
+  color: #fff;
+}
+
+.tify-plugin-panel .pill.is-invalid {
+  background: #b42318;
+  color: #fff;
+}
+
+.tify-plugin-panel .pill.is-unsigned,
+.tify-plugin-panel .pill.is-unknown {
+  background: #666;
+  color: #fff;
+}
+
+.tify-plugin-anno-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tify-plugin-panel tr.is-active td {
+  background: rgb(11 95 255 / 15%);
+}
+
+.tify-plugin-panel h3 {
+  font-size: 0.9rem;
+  margin: 0.8rem 0 0.3rem;
+}
+
+.tify-plugin-panel code {
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
+.tify-plugin-marker {
+  background: #0b5fff;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 1rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 40%);
+}
+
+.tify-plugin-tei-word {
+  outline: 1px solid rgb(11 95 255 / 80%);
+  background: rgb(11 95 255 / 12%);
+}
+
+.tify-plugin-tei-word:hover {
+  background: rgb(11 95 255 / 32%);
+}
+
+/* Docked panels inside .tify-main + header-button-style badges/buttons */
+.tify-main.tify-plugin-has-dock {
+  flex-wrap: wrap;
+}
+
+.tify-plugin-dock {
+  flex: 1 1 18rem;
+  min-width: 16rem;
+  max-width: 100%;
+  overflow: auto;
+
+  /* Stack above the OSD canvas (z-index: 0), which is absolutely positioned
+     over .tify-main and would otherwise swallow the panel's clicks. */
+  position: relative;
+  z-index: 1;
+}
+
+.tify-main .tify-plugin-panel {
+  background: var(
+    --tify-bg-color,
+    light-dark(
+      #fff,
+      oklch(
+        from var(--tify-base-color-dark, oklch(from var(--tify-base-color, #06b) calc(l * 1.5) c h))
+          calc(l / 4) calc(c / 20) h
+      )
+    )
+  );
+  border: 0;
+  border-left: 1px solid
+    var(
+      --tify-border-color,
+      light-dark(
+        oklch(from var(--tify-base-color, #06b) calc(l / 2) calc(c * 0.1) h / 15%),
+        oklch(
+          from
+            var(--tify-base-color-dark, oklch(from var(--tify-base-color, #06b) calc(l * 1.5) c h))
+            calc(l * 2) calc(c * 0.1) h / 15%
+        )
+      )
+    );
+  border-radius: 0;
+  max-height: none;
+}
+
+@media (width <= 719px) {
+  .tify-plugin-dock {
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    z-index: 6;
+    width: min(22rem, 94%);
+    max-width: none;
+    background: var(
+      --tify-bg-color,
+      light-dark(
+        #fff,
+        oklch(
+          from
+            var(--tify-base-color-dark, oklch(from var(--tify-base-color, #06b) calc(l * 1.5) c h))
+            calc(l / 4) calc(c / 20) h
+        )
+      )
+    );
+    border-left: 0;
+    box-shadow: -4px 0 12px rgb(0 0 0 / 25%);
+  }
+}
+
+.tify-header-button.tify-plugin-dock-btn {
+  flex-direction: column;
+  align-items: center;
+  align-self: center;
+  flex-shrink: 0;
+  gap: 0.15em;
+}
+
+.tify-header-button.tify-plugin-dock-btn .tify-header-button-label {
+  font-size: max(0.68em, 10px);
+  line-height: 1;
+}
+
+.tify-plugin-dock-btn .tify-icon {
+  color: var(--tify-plugin-badge-tint, currentcolor);
+}
+
+.tify-plugin-dock-btn.is-ok {
+  --tify-plugin-badge-tint: light-dark(#1a7f37, #4ade80);
+}
+
+.tify-plugin-dock-btn.is-bad {
+  --tify-plugin-badge-tint: light-dark(#b42318, #f87171);
+}

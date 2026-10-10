@@ -1,0 +1,38 @@
+# Publishes every workspace package to npm — but only after the full CI run
+# (lint, typecheck, i18n/TEI checks, e2e browser matrix) passes. Manual
+# release: bump the package versions first (all workspaces share one
+# version), then run this workflow. Needs the NPM_TOKEN repo secret
+# (an npm automation token with publish rights for @projektemacher).
+name: Publish
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: |
+          npm publish --workspace @projektemacher/tify-plugin-core
+          npm publish --workspace @projektemacher/tify-plugin-side-panel
+          npm publish --workspace @projektemacher/tify-plugin-image-overlays
+          npm publish --workspace @projektemacher/tify-plugin-hdr
+          npm publish --workspace @projektemacher/tify-plugin-c2pa
+          npm publish --workspace @projektemacher/tify-plugin-annotorious
+          npm publish --workspace @projektemacher/tify-plugin-musicxml
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
