@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { marked } from 'marked';
 
-const REPO_BLOB = 'https://github.com/projektemacher/tify-plugins/blob/main';
+const REPO_BLOB = 'https://github.com/cmahnke/tify-plugins/blob/main';
 
 const pages = [
   { id: 'index', title: 'tify-plugins', file: 'README.md' },

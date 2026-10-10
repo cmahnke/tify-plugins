@@ -7,7 +7,7 @@
   "homepage": "https://tify.rocks/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/projektemacher/tify-plugins.git",
+    "url": "git+https://github.com/cmahnke/tify-plugins.git",
     "directory": "packages/plugin-annotorious"
   },
   "keywords": [
