@@ -35,6 +35,10 @@ updates:
     directory: /packages/plugin-annotorious
     schedule:
       interval: weekly
+    # Pinned by hand: the 3.9.x line broke canvas-click selection
+    # (`clickAnnotation` never fires, list rows never highlight).
+    ignore:
+      - dependency-name: '@annotorious/*'
   - package-ecosystem: npm
     directory: /packages/plugin-musicxml
     schedule:
