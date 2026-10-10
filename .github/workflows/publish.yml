@@ -1,8 +1,14 @@
-# Publishes every workspace package to npm — but only after the full CI run
-# (lint, typecheck, i18n/TEI checks, e2e browser matrix) passes. Manual
-# release: bump the package versions first (all workspaces share one
-# version), then run this workflow. Needs the NPM_TOKEN repo secret
-# (an npm automation token with publish rights for @projektemacher).
+# Publishes every workspace package to npm AND to GitHub Packages — but only
+# after the full CI run (lint, typecheck, i18n/TEI checks, e2e browser matrix)
+# passes. Manual release: bump the package versions first (all workspaces
+# share one version), then run this workflow.
+#
+# - npmjs keeps the @projektemacher scope (needs the NPM_TOKEN repo secret,
+#   an npm automation token with publish rights for @projektemacher).
+# - GitHub Packages requires the scope to match the repo owner, so each
+#   package is renamed to @cmahnke/tify-plugin-* at publish time (in place,
+#   never committed); dependencies keep pointing at the @projektemacher
+#   packages on npmjs. Auth uses the built-in GITHUB_TOKEN.
 name: Publish
 
 on:
@@ -36,3 +42,47 @@ jobs:
           npm publish --workspace @projektemacher/tify-plugin-musicxml
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-gpr:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - core
+          - plugin-side-panel
+          - plugin-image-overlays
+          - plugin-hdr
+          - plugin-c2pa
+          - plugin-annotorious
+          - plugin-musicxml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@cmahnke'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build:packages
+      - name: Rename scope for GitHub Packages (must match the owner)
+        run: |
+          node -e "
+            const fs = require('fs');
+            const file = 'packages/${{ matrix.dir }}/package.json';
+            const p = JSON.parse(fs.readFileSync(file, 'utf8'));
+            p.name = p.name.replace('@projektemacher/', '@cmahnke/');
+            fs.writeFileSync(file, JSON.stringify(p, null, 2) + '\n');
+          "
+      - name: Publish to GitHub Packages
+        run: npm publish --access public
+        working-directory: packages/${{ matrix.dir }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

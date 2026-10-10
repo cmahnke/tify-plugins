@@ -103,6 +103,19 @@ import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
 import '@projektemacher/tify-plugin-core/style.css';
 ```
 
+The same packages are also published to GitHub Packages under the
+`@cmahnke` scope (`@cmahnke/tify-plugin-*`, mirroring the npmjs releases).
+Installing from there needs authentication — add to `.npmrc`:
+
+```
+@cmahnke:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=<personal-access-token>
+```
+
+then `npm install @cmahnke/tify-plugin-side-panel`. The inter-package
+dependency (`@projektemacher/tify-plugin-core`) still resolves from npmjs,
+so no extra registry configuration is needed for it.
+
 ## Plugin translations (English + German)
 
 English source strings are the keys; each workspace owns its catalogue at
