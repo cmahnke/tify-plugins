@@ -25,6 +25,9 @@ const plugin = await annotoriousPlugin(tify, {
   `W3CImageFormat().parse()`, verified: `xywh=265,661,1260,1239` → exact
   rectangle). Whole-canvas targets, SVG selectors and painting annotations are
   skipped.
+- `@annotorious/openseadragon` is pinned to `~3.8.10`: the 3.9.x line broke
+  canvas-click selection (no `clickAnnotation` events, so list rows never
+  highlight) — caught by the e2e suite. Re-evaluate on future releases.
 - Annotorious coordinates are relative to a single base image: in TIFY book
   view only the first visible page's annotations are shown (noted in the panel).
 

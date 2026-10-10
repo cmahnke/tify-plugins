@@ -43,23 +43,34 @@ test('imports manifest annotations into panel and display layer', async ({ page 
 });
 
 test('clicking a canvas shape highlights its list row', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
     timeout: 15_000,
   });
   await expect(page.locator('#panel tbody tr')).toHaveCount(2);
-  const point = await imageToElement(page, ANNO_CENTER.x, ANNO_CENTER.y);
   const row = page.locator('#panel tbody tr').first();
-  // The annotorious display layer draws on its WebGL canvas asynchronously;
-  // click until the shape hit-registers (proves end-to-end selectability).
+  // Let the tile world settle first: the annotorious draw needs a loaded
+  // world item, and TIFY veils the viewer while tiles are still loading.
+  await expect(page.locator('.tify-loading')).toBeHidden({ timeout: 15_000 });
+  // Recompute the click point on every iteration: layout can still shift
+  // while tiles load, which would strand a one-shot coordinate off-target.
+  // Annotorious only fires clickAnnotation when hover already registered the
+  // shape, so traverse to the point in steps (like a real pointer) and let
+  // hover settle before pressing — under parallel load the hit-testing can
+  // lag well behind the events.
   await expect
     .poll(
       async () => {
-        await page.mouse.click(point.x, point.y);
+        const point = await imageToElement(page, ANNO_CENTER.x, ANNO_CENTER.y);
+        await page.mouse.move(point.x, point.y, { steps: 5 });
+        await page.waitForTimeout(1500);
+        await page.mouse.down();
+        await page.mouse.up();
         await page.waitForTimeout(500);
         return row.evaluate((element) => element.className);
       },
-      { timeout: 15_000 },
+      { timeout: 60_000 },
     )
     .toContain('is-active');
 });
