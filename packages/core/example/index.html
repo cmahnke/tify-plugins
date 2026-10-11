@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="Info — tify-plugins">Info — tify-plugins</title>
+  </head>
+  <body>
+    <main class="example">
+      <p><a href="../../../" data-i18n="← all examples">← all examples</a></p>
+      <h1 data-i18n="Info">Info</h1>
+      <p
+        data-i18n="Lists the plugin-relevant features the manifest and image service advertise: IIIF versions, linked transcriptions, annotations, scores, and HDR/C2PA signals."
+      >
+        Lists the plugin-relevant features the manifest and image service advertise: IIIF versions,
+        linked transcriptions, annotations, scores, and HDR/C2PA signals.
+      </p>
+      <header class="controls">
+        <input
+          id="manifest"
+          type="url"
+          data-i18n-aria="IIIF manifest URL"
+          aria-label="IIIF manifest URL"
+        />
+        <button id="load" type="button" data-i18n="Load">Load</button>
+      </header>
+      <div class="layout">
+        <div id="tify" class="tify-frame"></div>
+        <aside id="panel" data-i18n-aria="Info panel" aria-label="Info panel"></aside>
+      </div>
+      <details class="code-example">
+        <summary data-i18n="Code example">Code example</summary>
+        <pre><code class="language-xml">&lt;!-- Viewer and panel hosts in your markup --&gt;
+&lt;div id="tify"&gt;&lt;/div&gt;
+&lt;aside id="panel"&gt;&lt;/aside&gt;</code></pre>
+        <pre><code class="language-typescript">import Tify from 'tify';
+import { infoPanelPlugin } from '@projektemacher/tify-plugin-core';
+
+const tify = new Tify({ container: '#tify', manifestUrl });
+// The plugin fills the #panel host above and docks
+// a toggle button into the viewer header.
+const plugin = await infoPanelPlugin(tify, {
+  panelEl: document.querySelector('#panel'),
+  dock: 'auto',
+  autoOpen: true,
+});
+
+// The same feature data without a panel, straight from the IIIF JSON:
+import { describeCanvas, describeImageFeatures, describeManifest } from '@projektemacher/tify-plugin-core';
+
+const manifest = { /* parsed manifest JSON */ };
+const features = {
+  ...describeManifest(manifest),
+  ...describeCanvas(manifest, 1),
+};</code></pre>
+        <p class="code-links">
+          <a href="../../../docs/core.html" data-i18n="Documentation">Documentation</a>
+        </p>
+      </details>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

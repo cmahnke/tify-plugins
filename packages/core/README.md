@@ -19,6 +19,12 @@ import '@projektemacher/tify-plugin-core/style.css';
 - **IIIF helpers** — manifest fetching/caching, canvas + Image API service
   listing, `info.json` access, `xywh` annotation extraction; Presentation 2
   (`sequences`/`@id`) and 3 (`items`/`id`) are both accepted wherever cheap.
+- **Feature detection** — `describeManifest`, `describeCanvas`,
+  `describeImageFeatures`: which plugin-relevant features the manifest and
+  image service advertise (IIIF versions, TEI/annotation/score links, HDR/C2PA
+  signals). Presence-only, no linked resources are fetched.
+- **Info panel** — `infoPanelPlugin`: lists those features for the current
+  page, docked or beside the viewer. Needs no sibling plugin package.
 - **Dock** — `dockPanel()` with `DOCK_ICONS`; see below.
 - **i18n** — `createTranslator`, `applyStaticTranslations`; see below.
 - **Styles** — `@projektemacher/tify-plugin-core/style.css` (panel skeleton,
@@ -48,9 +54,9 @@ English key with `[bracket hints]` stripped. The language follows
 `tify.options.language` (so `tify.setLanguage('de')` switches plugin UI too),
 then `?lang=`, then the browser language.
 
-Core itself bundles no UI strings: every workspace owns its catalogue at
-`src/i18n/translations/{lang}.json` (`$language` first, keys sorted), lazily
-imports it next to its code, and passes it to the translator:
+Core bundles UI strings only for the info panel: every workspace owns its
+catalogue at `src/i18n/translations/{lang}.json` (`$language` first, keys
+sorted), lazily imports it next to its code, and passes it to the translator:
 
 ```ts
 const de = (await import('./i18n/translations/de.json')).default;
@@ -63,11 +69,30 @@ repo root): fails on missing, unused, empty, or mis-sorted entries.
 
 Peer dependency: `tify` (the viewer provides the single instance).
 
+## Info panel
+
+```ts
+import { infoPanelPlugin } from '@projektemacher/tify-plugin-core';
+
+const plugin = await infoPanelPlugin(tify, {
+  panelEl: document.querySelector('#panel'),
+});
+```
+
+Lists the plugin-relevant features of the current page: Presentation version
+and canvas count, linked TEI transcriptions (canvas or manifest level),
+annotations (embedded or by reference), MusicXML scores, plus the image
+service's API version, profile, and HDR/C2PA advertisement. Presence-only:
+linked files are never fetched and nothing is verified — the panel works
+with core alone. The pure detectors are also exported for reuse
+(`describeManifest`, `describeCanvas`, `describeImageFeatures`).
+
 ## Examples using core
 
-Core is a library with no page of its own; the plugin examples exercise
-its panel, dock, i18n, and IIIF helpers. `packages/plugin-side-panel`
-is the smallest one to start from.
+`example/` — the info panel over any manifest. Run `npm run dev` at the
+repo root and open `/packages/core/example/`; append `?lang=de` for German
+strings. The plugin examples exercise the remaining helpers further;
+`packages/plugin-side-panel` is the smallest one to start from.
 
 ## Manifest generation
 
