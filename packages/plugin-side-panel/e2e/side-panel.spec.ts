@@ -71,6 +71,9 @@ test('docks its button into the view group and shows a code example', async ({ p
   const code = page.locator('details.code-example');
   await expect(code).toBeVisible();
   await expect(code).toContainText('sidePanelPlugin');
+  // The snippet shows the panel contents built programmatically.
+  await expect(code).toContainText('createSidePanel');
+  await expect(code).toContainText('panel.body.append');
   const docsLink = code.locator('a[href="../../../docs/plugin-side-panel.html"]');
   await expect(docsLink).toBeAttached();
   await code.locator('summary').click(); // expand → link becomes visible

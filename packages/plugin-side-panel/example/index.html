@@ -42,8 +42,20 @@ const plugin = await sidePanelPlugin(tify, {
   dock: 'auto',
   autoOpen: true,
 });
-// Panel contents: manifest title + canvas count,
-// live page status, Previous/Next/Thumbnails controls.</code></pre>
+
+// The same contents, constructed programmatically with core:
+import { createSidePanel, dockPanel, DOCK_ICONS } from '@projektemacher/tify-plugin-core';
+
+const panel = createSidePanel(document.querySelector('#panel'), 'Document');
+const title = document.createElement('p');
+title.textContent = 'Mock Book — 3 canvases'; // from the manifest
+panel.body.append(title);
+panel.status.textContent = 'Viewing page 1'; // updated on page change
+const prev = document.createElement('button');
+prev.textContent = '← Previous';
+prev.addEventListener('click', () => tify.setPage(1));
+panel.body.append(prev);
+dockPanel({ tify, id: 'document', label: 'Document', iconSvg: DOCK_ICONS.list, contentEl: panel.root });</code></pre>
         <p class="code-links">
           <a href="../../../docs/plugin-side-panel.html" data-i18n="Documentation">Documentation</a>
         </p>

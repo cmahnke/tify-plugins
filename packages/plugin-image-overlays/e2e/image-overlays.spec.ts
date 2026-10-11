@@ -28,6 +28,7 @@ test('opens with the live TEI demo by default', async ({ page }) => {
   await page.goto(EXAMPLE);
   await expect(page.locator('#manifest')).toHaveValue(/demo\/tei\/manifest\.json$/);
   const words = page.locator('.tify-plugin-tei-word');
-  await expect(words).toHaveCount(5);
+  await expect(words).toHaveCount(2);
   await expect(words.first()).toHaveAttribute('title', 'Gänseliesel');
+  await expect(words.nth(1)).toHaveAttribute('title', 'Brunnen');
 });

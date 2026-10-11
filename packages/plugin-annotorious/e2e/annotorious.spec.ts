@@ -148,6 +148,7 @@ test('preset dropdown fills the manifest input and loads', async ({ page }) => {
   );
   await page.goto(EXAMPLE);
   const select = page.locator('#manifest-preset');
+  await expect(select).toBeVisible();
   await expect(select.locator('option')).toHaveCount(4);
   await expect(select).toHaveValue(
     'https://iiif.io/api/cookbook/recipe/0021-tagging/manifest.json',
