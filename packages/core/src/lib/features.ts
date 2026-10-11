@@ -7,6 +7,7 @@
 // plugin-hdr (`HDR_PROFILE_URI`) and plugin-c2pa (`C2PA_PROFILE_URI`).
 // They are duplicated here (not imported) because core cannot depend on
 // sibling plugin packages; keep the three copies in sync.
+import { canvasesOf } from './iiif';
 
 /** Placeholder URI used in info.json `profile[].supports` to signal HDR. */
 export const HDR_PROFILE_URI = 'https://christianmahnke.de/iiif/hdr/';
@@ -14,11 +15,11 @@ export const HDR_PROFILE_URI = 'https://christianmahnke.de/iiif/hdr/';
 /** Placeholder URI used in info.json `profile[].supports` to signal C2PA. */
 export const C2PA_PROFILE_URI = 'https://christianmahnke.de/iiif/c2pa/';
 
-export type PresentationVersion = '2' | '3' | 'unknown';
+export type PresentationVersion = '2' | '3' | '4' | 'unknown';
 
 export interface ManifestDescription {
   version: PresentationVersion;
-  /** Number of canvases in display order. */
+  /** Number of canvases in display order (Scene containers excluded). */
   canvasCount: number;
 }
 
@@ -29,22 +30,13 @@ export function describeManifest(manifest: any): ManifestDescription {
   const items = manifest?.items;
   const sequences = manifest?.sequences;
   let version: PresentationVersion = 'unknown';
-  if (Array.isArray(items) || context.includes('/presentation/3')) {
-    version = '3';
+  if (Array.isArray(items) || context.includes('/presentation/4')) {
+    // v4 reuses the v3 2D model (plus 3D Scenes, filtered in canvasesOf).
+    version = context.includes('/presentation/4') ? '4' : '3';
   } else if (Array.isArray(sequences) || context.includes('/presentation/2')) {
     version = '2';
   }
-  const canvases = Array.isArray(items)
-    ? items
-    : Array.isArray(sequences?.[0]?.canvases)
-      ? sequences[0].canvases
-      : [];
-  return { version, canvasCount: canvases.length };
-}
-
-function canvasAt(manifest: any, page: number): any {
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  return Array.isArray(items) ? items[page - 1] : undefined;
+  return { version, canvasCount: canvasesOf(manifest).length };
 }
 
 function asList(value: unknown): any[] {
@@ -89,17 +81,22 @@ export interface CanvasFeatures {
 export function describeCanvas(manifest: any, page: number): CanvasFeatures {
   const result: CanvasFeatures = { tei: 'none', annotations: 'none', musicXml: false };
   try {
-    const canvas = canvasAt(manifest, page);
+    const canvas = canvasesOf(manifest)[page - 1];
     if (!canvas || typeof canvas !== 'object') return result;
     if (asList(canvas?.seeAlso).some(isTeiRef)) {
       result.tei = 'canvas';
     } else if (asList(manifest?.seeAlso).some(isTeiRef)) {
       result.tei = 'manifest';
     }
-    const refs = asList(canvas?.annotations);
-    if (refs.some((entry) => Array.isArray(entry?.items))) {
+    // v3 `annotations`, v2 `otherContent` (embedded lists or bare-URI refs).
+    const refs = [...asList(canvas?.annotations), ...asList(canvas?.otherContent)];
+    if (refs.some((entry) => Array.isArray(entry?.items) || Array.isArray(entry?.resources))) {
       result.annotations = 'embedded';
-    } else if (refs.some((entry) => typeof (entry?.id ?? entry?.['@id']) === 'string')) {
+    } else if (
+      refs.some(
+        (entry) => typeof entry === 'string' || typeof (entry?.id ?? entry?.['@id']) === 'string',
+      )
+    ) {
       result.annotations = 'external';
     }
     if (asList(canvas?.rendering).some(isMusicXmlRef)) result.musicXml = true;

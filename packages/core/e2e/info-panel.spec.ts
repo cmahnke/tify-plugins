@@ -144,6 +144,28 @@ function v2Manifest(): object {
                 on: `${MOCK_BASE}/canvas/p1`,
               },
             ],
+            rendering: [
+              {
+                '@id': `${MOCK_BASE}/score.musicxml`,
+                format: 'application/vnd.recordare.musicxml+xml',
+                label: 'Score',
+              },
+            ],
+            otherContent: [
+              {
+                '@id': `${MOCK_BASE}/annotations/p1.json`,
+                '@type': 'sc:AnnotationList',
+                resources: [
+                  {
+                    '@id': `${MOCK_BASE}/annotation/anno-1`,
+                    '@type': 'oa:Annotation',
+                    motivation: 'oa:commenting',
+                    resource: { '@type': 'cnt:ContentAsText', chars: 'Note 1' },
+                    on: `${MOCK_BASE}/canvas/p1#xywh=50,100,200,150`,
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
@@ -176,7 +198,24 @@ test('reads a Presentation 2 manifest with an Image API 2 service', async ({ pag
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await expect(row(page, 'Presentation version')).toContainText('2');
   await expect(row(page, 'Canvases')).toContainText('1');
+  await expect(row(page, 'Annotations')).toContainText('embedded');
+  await expect(row(page, 'MusicXML score')).toContainText('yes');
   await expect(row(page, 'API version')).toContainText('2');
+});
+
+function v4Manifest(): object {
+  const manifest = buildManifest({ canvases: 1 }) as any;
+  manifest['@context'] = 'http://iiif.io/api/presentation/4/context.json';
+  manifest.label = { en: ['Mock V4'] };
+  return manifest;
+}
+
+test('reads a Presentation 4 manifest like v3 (2D subset)', async ({ page }) => {
+  await mockIiif(page, { manifest: v4Manifest() });
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await expect(row(page, 'Presentation version')).toContainText('4');
+  await expect(row(page, 'Canvases')).toContainText('1');
+  await expect(row(page, 'API version')).toContainText('3');
 });
 
 test('lists advertised HDR and C2PA capabilities', async ({ page }) => {

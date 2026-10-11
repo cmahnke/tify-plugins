@@ -12,6 +12,7 @@
 // Without staff data the score falls back to a whole-page letterbox layout.
 import type Tify from 'tify';
 import {
+  canvasesOf,
   createSidePanel,
   fetchText,
   getManifest,
@@ -250,7 +251,9 @@ function bodyValue(body: unknown): string | undefined {
     return undefined;
   }
   if (body && typeof body === 'object') {
-    const value = (body as { value?: unknown }).value;
+    // v3 `value`, v2 OA `chars`.
+    const value =
+      (body as { value?: unknown; chars?: unknown }).value ?? (body as { chars?: unknown }).chars;
     return typeof value === 'string' ? value : undefined;
   }
   return undefined;
@@ -274,8 +277,7 @@ function resolveUrl(id: string | undefined, base: string): string | null {
 
 /** Score data of one canvas: MusicXML URL plus staff entries (may be empty). */
 function pageScore(manifest: any, manifestUrl: string, page: number): PageScore | null {
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  const canvas = items[page - 1];
+  const canvas = canvasesOf(manifest)[page - 1];
   if (!canvas) return null;
   const width = Number(canvas?.width ?? 0);
   const height = Number(canvas?.height ?? 0);
@@ -297,10 +299,20 @@ function pageScore(manifest: any, manifestUrl: string, page: number): PageScore 
   }
 
   const staves: StaffEntry[] = [];
-  const annotationPages = Array.isArray(canvas?.annotations) ? canvas.annotations : [];
+  // v3 `annotations`/`items`, v2 `otherContent`/`resources`; v2 targets live
+  // in `on` and grid JSON in `resource` — both normalized below.
+  const annotationPages = [
+    ...(Array.isArray(canvas?.annotations) ? canvas.annotations : []),
+    ...(Array.isArray(canvas?.otherContent) ? canvas.otherContent : []),
+  ];
   for (const annotationPage of annotationPages) {
-    const entries = Array.isArray(annotationPage?.items) ? annotationPage.items : [];
-    for (const annotation of entries) {
+    const entries = [
+      ...(Array.isArray(annotationPage?.items) ? annotationPage.items : []),
+      ...(Array.isArray(annotationPage?.resources) ? annotationPage.resources : []),
+    ];
+    for (const raw of entries) {
+      const annotation =
+        raw?.target === undefined && raw?.on !== undefined ? { ...raw, target: raw.on } : raw;
       const target =
         typeof annotation?.target === 'string'
           ? annotation.target
@@ -308,7 +320,7 @@ function pageScore(manifest: any, manifestUrl: string, page: number): PageScore 
       if (typeof target !== 'string') continue;
       const bbox = xywhToBbox(target);
       if (!bbox) continue;
-      const body = staffFromBody(bodyValue(annotation?.body));
+      const body = staffFromBody(bodyValue(annotation?.body ?? annotation?.resource));
       if (!body) continue;
       staves.push({
         bbox,

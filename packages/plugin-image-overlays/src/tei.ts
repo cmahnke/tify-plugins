@@ -11,6 +11,7 @@
 //
 // This module converts that into canvas-pixel boxes; rendering stays in
 // image-overlays.ts. Book view keeps the repo-wide first-page-only limit.
+import { canvasesOf } from '@projektemacher/tify-plugin-core';
 
 export interface TeiWordBox {
   /** Word/line text (hover preview). */
@@ -137,8 +138,7 @@ function isTeiRef(ref: { id: string; format: string }): boolean {
 
 /** Absolute TEI URL from canvas (preferred) or manifest `seeAlso`. */
 function resolveTeiUrl(manifest: any, page: number, base: string): TeiRef | null {
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  const canvas = items[page - 1];
+  const canvas = canvasesOf(manifest)[page - 1];
   const candidates = [...(canvas ? seeAlsoRefs(canvas) : []), ...seeAlsoRefs(manifest)];
   for (const ref of candidates) {
     if (!isTeiRef(ref)) continue;
@@ -172,8 +172,7 @@ export async function fetchTeiPage(
   const level = options.level ?? 'word';
   const maxWords = options.maxWords ?? DEFAULT_MAX_WORDS;
 
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  const canvas = items[page - 1];
+  const canvas = canvasesOf(manifest)[page - 1];
   if (!canvas) return null;
   const canvasId = String(canvas?.id ?? canvas?.['@id'] ?? '');
   const canvasW = Number(canvas?.width ?? Number.NaN);

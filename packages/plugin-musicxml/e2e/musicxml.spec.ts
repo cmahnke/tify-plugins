@@ -248,3 +248,93 @@ test('german player chrome (?lang=de)', async ({ page }) => {
   await expect(page.locator('.player-btn').first()).toHaveText('Abspielen');
   await expect(page.locator('.tify-plugin-status')).toHaveText('');
 });
+
+function v2ScoreManifest(): object {
+  return {
+    '@context': 'http://iiif.io/api/presentation/2/context.json',
+    '@id': `${MOCK_BASE}/manifest.json`,
+    '@type': 'sc:Manifest',
+    label: 'Mock V2 Score',
+    sequences: [
+      {
+        '@id': `${MOCK_BASE}/sequence/1`,
+        '@type': 'sc:Sequence',
+        canvases: [
+          {
+            '@id': `${MOCK_BASE}/canvas/p1`,
+            '@type': 'sc:Canvas',
+            label: 'Page 1',
+            width: 750,
+            height: 1000,
+            images: [
+              {
+                '@id': `${MOCK_BASE}/annotation/p1-image`,
+                '@type': 'oa:Annotation',
+                motivation: 'sc:painting',
+                resource: {
+                  '@id': `${MOCK_BASE}/image/full/full/0/default.jpg`,
+                  '@type': 'dctypes:Image',
+                  format: 'image/jpeg',
+                  width: 750,
+                  height: 1000,
+                  service: {
+                    '@context': 'http://iiif.io/api/image/2/context.json',
+                    '@id': `${MOCK_BASE}/image`,
+                    profile: 'http://iiif.io/api/image/2/level2.json',
+                  },
+                },
+                on: `${MOCK_BASE}/canvas/p1`,
+              },
+            ],
+            rendering: [
+              {
+                '@id': SCORE_URL,
+                '@type': 'dctypes:Text',
+                format: 'application/vnd.recordare.musicxml+xml',
+              },
+            ],
+            otherContent: [
+              {
+                '@id': `${MOCK_BASE}/annotations/p1.json`,
+                '@type': 'sc:AnnotationList',
+                resources: [
+                  {
+                    '@id': `${MOCK_BASE}/annotation/staff-1`,
+                    '@type': 'oa:Annotation',
+                    motivation: 'oa:commenting',
+                    resource: {
+                      '@type': 'cnt:ContentAsText',
+                      format: 'application/json',
+                      chars: JSON.stringify({
+                        staffGrid: staffGrid(50, 100, 700),
+                        staffLineCount: 5,
+                      }),
+                    },
+                    on: `${MOCK_BASE}/canvas/p1#xywh=50,100,650,140`,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+test('discovers a v2 score rendering and staff grid', async ({ page }) => {
+  // Registered after beforeEach: the later route wins for the manifest URL
+  // (the score-XML route from mockScore stays as is).
+  await page.route(`${MOCK_BASE}/manifest.json`, (route) =>
+    route.fulfill({ json: v2ScoreManifest() }),
+  );
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  const dock = page.locator('.tify-plugin-dock-btn');
+  await expect(dock).toHaveCount(1);
+  await expect(dock).toContainText('Score');
+  await openPlayer(page);
+  await expect(page.locator('#panel h2')).toHaveText('Score');
+  await expect(page.locator('.score-overlay > svg.score-system').first()).toBeVisible({
+    timeout: 30_000,
+  });
+});

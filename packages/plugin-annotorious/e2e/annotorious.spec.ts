@@ -164,3 +164,79 @@ test('preset dropdown fills the manifest input and loads', async ({ page }) => {
     timeout: 15_000,
   });
 });
+
+function v2Manifest(): object {
+  return {
+    '@context': 'http://iiif.io/api/presentation/2/context.json',
+    '@id': `${MOCK_BASE}/manifest.json`,
+    '@type': 'sc:Manifest',
+    label: 'Mock V2',
+    sequences: [
+      {
+        '@id': `${MOCK_BASE}/sequence/1`,
+        '@type': 'sc:Sequence',
+        canvases: [
+          {
+            '@id': `${MOCK_BASE}/canvas/p1`,
+            '@type': 'sc:Canvas',
+            label: 'Page 1',
+            width: 750,
+            height: 1000,
+            images: [
+              {
+                '@id': `${MOCK_BASE}/annotation/p1-image`,
+                '@type': 'oa:Annotation',
+                motivation: 'sc:painting',
+                resource: {
+                  '@id': `${MOCK_BASE}/image/full/full/0/default.jpg`,
+                  '@type': 'dctypes:Image',
+                  format: 'image/jpeg',
+                  width: 750,
+                  height: 1000,
+                  service: {
+                    '@context': 'http://iiif.io/api/image/2/context.json',
+                    '@id': `${MOCK_BASE}/image`,
+                    profile: 'http://iiif.io/api/image/2/level2.json',
+                  },
+                },
+                on: `${MOCK_BASE}/canvas/p1`,
+              },
+            ],
+            otherContent: [
+              {
+                '@id': `${MOCK_BASE}/annotations/p1.json`,
+                '@type': 'sc:AnnotationList',
+                resources: [
+                  {
+                    '@id': `${MOCK_BASE}/annotation/anno-1`,
+                    '@type': 'oa:Annotation',
+                    motivation: 'oa:commenting',
+                    resource: {
+                      '@type': 'cnt:ContentAsText',
+                      chars: 'Note 1',
+                      format: 'text/plain',
+                    },
+                    on: `${MOCK_BASE}/canvas/p1#xywh=50,100,200,150`,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+test('imports v2 otherContent annotations into the panel', async ({ page }) => {
+  // Registered after beforeEach: the later route wins for the manifest URL.
+  await page.route(`${MOCK_BASE}/manifest.json`, (route) => route.fulfill({ json: v2Manifest() }));
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  // List rows require a parsed annotation, so this proves the OA entry
+  // survived normalization and w3c.parse.
+  await expect(page.locator('.tify-plugin-status')).toContainText('1 annotations', {
+    timeout: 15_000,
+  });
+  await expect(page.locator('#panel tbody tr')).toHaveCount(1);
+  await expect(page.locator('#panel tbody tr').first()).toContainText('Note 1');
+});

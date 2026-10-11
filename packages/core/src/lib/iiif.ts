@@ -14,6 +14,23 @@ const manifestCache = new Map<string, any>();
 const infoCache = new Map<string, any>();
 const annotationCache = new Map<string, any[]>();
 
+/** v2 type names that are never canvases (Presentation 4 containers). */
+function isScene(entry: any): boolean {
+  const type = entry?.type ?? entry?.['@type'];
+  return type === 'Scene' || type === 'Timeline';
+}
+
+/**
+ * Canvases in display order: v3/v4 `items` (minus Scene containers),
+ * v2 `sequences[0].canvases`. Shared by every page-indexed lookup so page
+ * numbers stay aligned across API versions.
+ */
+export function canvasesOf(manifest: any): any[] {
+  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
+  if (!Array.isArray(items)) return [];
+  return items.filter((entry) => !isScene(entry));
+}
+
 export async function getManifest(tify: Tify): Promise<any> {
   const url = tify.options?.manifestUrl as string | undefined;
   if (!url) throw new Error('No manifestUrl set on TIFY instance');
@@ -27,8 +44,7 @@ export async function getManifest(tify: Tify): Promise<any> {
 /** Flat canvas list in display order (1-based pages). */
 export function listCanvases(manifest: any): CanvasRef[] {
   const canvases: CanvasRef[] = [];
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  for (const canvas of items) {
+  for (const canvas of canvasesOf(manifest)) {
     let serviceId: string | null;
     try {
       const body = canvas?.items?.[0]?.items?.[0]?.body ?? canvas?.images?.[0]?.resource;
@@ -99,16 +115,24 @@ interface AnnotationRef {
 
 /** Raw annotation refs of a 1-based page (embedded items or page IDs). */
 export function getAnnotationRefs(manifest: any, page: number): AnnotationRef[] {
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  const canvas = items[page - 1];
+  const canvas = canvasesOf(manifest)[page - 1];
   if (!canvas) return [];
-  const annotations = canvas?.annotations ?? [];
+  // v3 `annotations`, v2 `otherContent` (embedded lists or bare-URI refs).
+  const annotations = [...asList(canvas?.annotations), ...asList(canvas?.otherContent)];
   return (annotations as any[]).flatMap((entry): AnnotationRef[] => {
+    if (typeof entry === 'string') return [{ id: entry }];
     if (Array.isArray(entry?.items)) return [{ items: entry.items }];
+    if (Array.isArray(entry?.resources)) return [{ items: entry.resources }];
     const id = entry?.id ?? entry?.['@id'];
     if (typeof id === 'string') return [{ id }];
     return [];
   });
+}
+
+function asList(value: unknown): any[] {
+  if (Array.isArray(value)) return value;
+  if (value === undefined || value === null) return [];
+  return [value];
 }
 
 async function fetchPageItems(ref: AnnotationRef): Promise<any[]> {
@@ -117,18 +141,20 @@ async function fetchPageItems(ref: AnnotationRef): Promise<any[]> {
   const cached = annotationCache.get(ref.id);
   if (cached) return cached;
   const doc = await fetchJson(ref.id);
-  // Direct AnnotationPage, or a Collection of pages (one level, v1 scope).
+  // Direct AnnotationPage (W3C `items`, OA `resources`), or a Collection
+  // of pages (one level, v1 scope).
   let items: any[] = [];
-  if (Array.isArray(doc?.items)) {
-    const nested = doc.items.filter((entry: any) => entry?.type === 'AnnotationPage');
+  const docItems = Array.isArray(doc?.items) ? doc.items : (doc?.resources ?? []);
+  if (Array.isArray(docItems)) {
+    const nested = docItems.filter((entry: any) => entry?.type === 'AnnotationPage');
     if (doc?.type === 'AnnotationPage' || nested.length === 0) {
-      items = doc.items;
+      items = docItems;
     } else {
       const pages = await Promise.all(
         nested.slice(0, 5).map(async (entry: any) => {
           try {
             const sub = await fetchJson(entry.id ?? entry['@id']);
-            return Array.isArray(sub?.items) ? sub.items : [];
+            return Array.isArray(sub?.items) ? sub.items : (sub?.resources ?? []);
           } catch {
             return [];
           }
@@ -184,8 +210,7 @@ export async function getXywhAnnotations(
   manifest: any,
   page: number,
 ): Promise<{ canvasId: string; annotations: any[] }> {
-  const items = manifest?.items ?? manifest?.sequences?.[0]?.canvases ?? [];
-  const canvas = items[page - 1];
+  const canvas = canvasesOf(manifest)[page - 1];
   const canvasId = String(canvas?.id ?? canvas?.['@id'] ?? '');
   const refs = getAnnotationRefs(manifest, page);
   const collected: any[] = [];
@@ -204,22 +229,33 @@ export async function getXywhAnnotations(
           : Array.isArray(entry.motivation)
             ? entry.motivation
             : [entry.motivation];
-      if (motivations.includes('painting')) continue;
-      if (xywhFragmentOf(entry.target) === null) continue;
-      collected.push(entry);
+      // v2 prefixes (`sc:painting`, `oa:commenting`) alongside bare v3 names.
+      const bare = motivations.map((m: unknown) => String(m).split(':').pop());
+      if (bare.includes('painting')) continue;
+      // v2 targets live in `on` and ids in `@id`; normalize so downstream
+      // W3C logic (fragment parsing, selection) applies unchanged.
+      const needsTarget = entry.target === undefined && entry.on !== undefined;
+      const needsId = entry.id === undefined && typeof entry['@id'] === 'string';
+      const normalized =
+        needsTarget || needsId
+          ? {
+              ...entry,
+              ...(needsTarget ? { target: entry.on } : null),
+              ...(needsId ? { id: entry['@id'] } : null),
+            }
+          : entry;
+      if (xywhFragmentOf(normalized.target) === null) continue;
+      collected.push(normalized);
     }
   }
   return { canvasId, annotations: collected };
 }
 
-/** Short human-readable summary of W3C bodies for list rows. */
+/** Short human-readable summary of annotation bodies for list rows. */
 export function summarizeBodies(annotation: any, fallback: string): string {
-  const bodies =
-    annotation?.body === undefined
-      ? []
-      : Array.isArray(annotation.body)
-        ? annotation.body
-        : [annotation.body];
+  // v3 `body`, v2 OA `resource`.
+  const raw = annotation?.body ?? annotation?.resource;
+  const bodies = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
   const texts: string[] = [];
   for (const body of bodies) {
     if (!body) continue;
@@ -227,8 +263,10 @@ export function summarizeBodies(annotation: any, fallback: string): string {
       texts.push(body);
       continue;
     }
-    if (typeof body.value === 'string' && body.value.trim() !== '') {
-      texts.push(body.value);
+    // v3 `value`, v2 OA `chars`.
+    const text = body.value ?? body.chars;
+    if (typeof text === 'string' && text.trim() !== '') {
+      texts.push(text);
       continue;
     }
     if (typeof body.label === 'string' && body.label.trim() !== '') {

@@ -130,3 +130,56 @@ test('german example chrome and plugin strings (?lang=de)', async ({ page }) => 
   await expect(dock).toContainText('Dokument');
   await expect(page.locator('.tify-plugin-status')).toHaveText('Seite 1 wird angezeigt');
 });
+
+function v2Manifest(): object {
+  return {
+    '@context': 'http://iiif.io/api/presentation/2/context.json',
+    '@id': `${MOCK_BASE}/manifest.json`,
+    '@type': 'sc:Manifest',
+    label: 'Mock V2',
+    sequences: [
+      {
+        '@id': `${MOCK_BASE}/sequence/1`,
+        '@type': 'sc:Sequence',
+        canvases: [
+          {
+            '@id': `${MOCK_BASE}/canvas/p1`,
+            '@type': 'sc:Canvas',
+            label: 'Page 1',
+            width: 750,
+            height: 1000,
+            images: [
+              {
+                '@id': `${MOCK_BASE}/annotation/p1-image`,
+                '@type': 'oa:Annotation',
+                motivation: 'sc:painting',
+                resource: {
+                  '@id': `${MOCK_BASE}/image/full/full/0/default.jpg`,
+                  '@type': 'dctypes:Image',
+                  format: 'image/jpeg',
+                  width: 750,
+                  height: 1000,
+                  service: {
+                    '@context': 'http://iiif.io/api/image/2/context.json',
+                    '@id': `${MOCK_BASE}/image`,
+                    profile: 'http://iiif.io/api/image/2/level2.json',
+                  },
+                },
+                on: `${MOCK_BASE}/canvas/p1`,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+test('renders a v2 manifest title and canvas count', async ({ page }) => {
+  // Registered after beforeEach: the later route wins for the manifest URL.
+  await page.route(`${MOCK_BASE}/manifest.json`, (route) => route.fulfill({ json: v2Manifest() }));
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await expect(page.locator('.tify-plugin-status')).toHaveText('Viewing page 1');
+  await expect(page.locator('#panel')).toContainText('Mock V2');
+  await expect(page.locator('#panel')).toContainText('1 canvases');
+});

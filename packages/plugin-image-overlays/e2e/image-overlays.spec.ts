@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { MOCK_BASE, buildManifest, mockIiif } from '../../../e2e/helpers';
 
 const EXAMPLE = '/packages/plugin-image-overlays/example/';
@@ -111,4 +114,68 @@ test('URL params initialize rendering state via the API', async ({ page }) => {
   await expect(page.locator('#panel input[type="range"]')).toHaveValue('0.5');
   await expect(page.getByRole('checkbox', { name: 'Show annotations' })).not.toBeChecked();
   await expect(page.getByRole('checkbox', { name: 'Show outlines' })).not.toBeChecked();
+});
+
+function v2TeiManifest(): object {
+  return {
+    '@context': 'http://iiif.io/api/presentation/2/context.json',
+    '@id': `${MOCK_BASE}/manifest.json`,
+    '@type': 'sc:Manifest',
+    label: 'Mock V2 TEI',
+    sequences: [
+      {
+        '@id': `${MOCK_BASE}/sequence/1`,
+        '@type': 'sc:Sequence',
+        canvases: [
+          {
+            '@id': `${MOCK_BASE}/canvas/p1`,
+            '@type': 'sc:Canvas',
+            label: 'Page 1',
+            width: 750,
+            height: 1000,
+            images: [
+              {
+                '@id': `${MOCK_BASE}/annotation/p1-image`,
+                '@type': 'oa:Annotation',
+                motivation: 'sc:painting',
+                resource: {
+                  '@id': `${MOCK_BASE}/image/full/full/0/default.jpg`,
+                  '@type': 'dctypes:Image',
+                  format: 'image/jpeg',
+                  width: 750,
+                  height: 1000,
+                  service: {
+                    '@context': 'http://iiif.io/api/image/2/context.json',
+                    '@id': `${MOCK_BASE}/image`,
+                    profile: 'http://iiif.io/api/image/2/level2.json',
+                  },
+                },
+                on: `${MOCK_BASE}/canvas/p1`,
+              },
+            ],
+            seeAlso: [
+              {
+                '@id': `${MOCK_BASE}/tei.xml`,
+                format: 'application/tei+xml',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+test('draws TEI word boxes from a v2 canvas seeAlso', async ({ page }) => {
+  await mockIiif(page, { manifest: v2TeiManifest() });
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  await page.route(`${MOCK_BASE}/tei.xml`, (route) =>
+    route.fulfill({
+      body: readFileSync(path.join(here, '..', '..', '..', 'e2e', 'fixtures', 'tei.xml'), 'utf8'),
+      contentType: 'application/xml',
+    }),
+  );
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect.poll(() => words.count()).toBeGreaterThan(0);
 });

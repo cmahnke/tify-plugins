@@ -18,7 +18,9 @@ import '@projektemacher/tify-plugin-core/style.css';
   page/view events, so options are polled cheaply and watched via DOM mutations).
 - **IIIF helpers** — manifest fetching/caching, canvas + Image API service
   listing, `info.json` access, `xywh` annotation extraction; Presentation 2
-  (`sequences`/`@id`) and 3 (`items`/`id`) are both accepted wherever cheap.
+  (`sequences`/`@id`, `otherContent`, OA `on`/`resources`) and 3
+  (`items`/`id`) are both accepted wherever cheap, as is the Presentation 4
+  2D subset (v4 adds 3D Scenes, out of scope).
 - **Feature detection** — `describeManifest`, `describeCanvas`,
   `describeImageFeatures`: which plugin-relevant features the manifest and
   image service advertise (IIIF versions, TEI/annotation/score links, HDR/C2PA
@@ -86,6 +88,8 @@ service's API version, profile, and HDR/C2PA advertisement. Presence-only:
 linked files are never fetched and nothing is verified — the panel works
 with core alone. The pure detectors are also exported for reuse
 (`describeManifest`, `describeCanvas`, `describeImageFeatures`).
+Presentation 2, 3, and the Presentation 4 2D subset are all covered
+(Image API has no v4; 3D Scenes are out of scope).
 
 ## Examples using core
 
