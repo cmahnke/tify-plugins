@@ -27,7 +27,22 @@ globalThis.fetch = async (url) => {
   }
 };
 
-const { fetchTeiPage } = await import('../src/tei.ts');
+let fetchTeiPage;
+try {
+  ({ fetchTeiPage } = await import('../src/tei.ts'));
+} catch (error) {
+  // Plain Node has no vite aliases: the plugin's core import resolves to
+  // core's built dist/ (workspace symlink), so it must exist before this
+  // script runs — `npm run build:packages` at the repo root, or CI's app job.
+  if (String(error?.url ?? error?.message ?? '').includes('tify-plugin-core/dist')) {
+    console.error(
+      'test:tei: @projektemacher/tify-plugin-core is not built yet.\n' +
+        'Run `npm run build:packages` at the repo root first, then retry.',
+    );
+    process.exit(1);
+  }
+  throw error;
+}
 const manifest = JSON.parse(await readFile('./example/tei-fixture/manifest.json', 'utf8'));
 
 const page = await fetchTeiPage(manifest, `${base}/manifest.json`, 1, {});
