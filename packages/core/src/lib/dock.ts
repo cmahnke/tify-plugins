@@ -40,18 +40,20 @@ function tifyScope(tify: Tify): ParentNode {
 }
 
 /**
- * Anchor for the dock button. TIFY 0.36 renders no visible `-view` group in
- * the desktop header (the view list lives inside hidden dropdown contents —
- * `.tify-dropdown-content.-mobile-only`), so prefer the header's `-toggle`
- * group (next to TIFY's own view toggle). Other versions expose a plain
- * `-view` group; the controls column is the last resort.
+ * Anchor for the dock button. TIFY 0.36 swaps the header layout by container
+ * width: below 1200px the `-toggle` group is shown and the `-view` groups sit
+ * inside a hidden dropdown; above it the `-toggle` group is `display:none` and
+ * the `-view` group is laid out inline. So the button goes into the primary
+ * `-view` group (as its last child, after TIFY's own view buttons) — visible
+ * on wide screens, inside the view dropdown on narrow ones. Other versions may
+ * expose a plain `-view` group; the toggle group and controls column stay as
+ * fallbacks.
  */
 function pickHeaderGroup(scope: ParentNode): HTMLElement | null {
+  const viewGroup = scope.querySelector('.tify-header .tify-header-button-group.-view');
+  if (viewGroup instanceof HTMLElement) return viewGroup;
   const toggleGroup = scope.querySelector('.tify-header .tify-header-button-group.-toggle');
   if (toggleGroup instanceof HTMLElement) return toggleGroup;
-  for (const group of scope.querySelectorAll('.tify-header-button-group.-view')) {
-    if (group instanceof HTMLElement && !group.closest('.tify-dropdown-content')) return group;
-  }
   const column = scope.querySelector('.tify-header .tify-header-column.-controls');
   return column instanceof HTMLElement ? column : null;
 }
@@ -117,7 +119,55 @@ export function dockPanel(options: DockOptions): DockHandle | null {
   if (!contentEl.id) contentEl.id = `tify-plugin-dock-${id}`;
   button.setAttribute('aria-controls', contentEl.id);
   button.setAttribute('aria-expanded', 'false');
-  viewGroup.append(button);
+
+  // TIFY swaps the header groups by container width (container-type: size on
+  // .tify): the -view group is laid out inline on wide viewers, the -toggle
+  // group on narrow ones (where -view sits inside the closed view dropdown).
+  // The button follows the swap, staying the last element of its group. The
+  // groups are re-queried on every attempt: the plugin can init before TIFY's
+  // header is fully rendered, and the -view group may appear later.
+  const findHeaderGroups = (): HTMLElement[] => {
+    const view = scope.querySelector('.tify-header .tify-header-button-group.-view');
+    const toggle = scope.querySelector('.tify-header .tify-header-button-group.-toggle');
+    return [view, toggle].filter((group): group is HTMLElement => group instanceof HTMLElement);
+  };
+  if (findHeaderGroups().length === 0) {
+    if (mode === true) {
+      throw new Error(`tify-plugins: cannot dock panel "${id}" (TIFY DOM not recognized)`);
+    }
+    return null;
+  }
+
+  let disposed = false;
+  let placing = false;
+  const place = (): void => {
+    if (disposed || placing) return;
+    placing = true;
+    // Already laid out somewhere visible? Nothing to do.
+    if (button.isConnected && button.offsetParent !== null) {
+      placing = false;
+      return;
+    }
+    const groups = findHeaderGroups();
+    const visible = groups.find((group) => group.offsetParent !== null);
+
+    if (visible) visible.append(button);
+    else if (groups.length > 0) groups[0].append(button);
+    placing = false;
+  };
+  place();
+
+  // Re-append if TIFY drops the button (the -view group is re-rendered per
+  // availableViews) or when the view group appears after plugin init.
+  const controlsColumn = scope.querySelector('.tify-header .tify-header-column.-controls');
+  const observeHost = controlsColumn ?? scope.querySelector('.tify-header') ?? scope;
+  const observer = new MutationObserver(place);
+  observer.observe(observeHost, { childList: true, subtree: true });
+
+  // Follow the container-query swap when the viewer is resized.
+  const containerEl = main.closest('.tify') ?? main;
+  const resizeObserver = new ResizeObserver(place);
+  resizeObserver.observe(containerEl);
 
   const home = { parent: contentEl.parentElement, next: contentEl.nextSibling };
   contentEl.classList.add('tify-plugin-dock');
@@ -126,7 +176,6 @@ export function dockPanel(options: DockOptions): DockHandle | null {
   main.dataset.pluginDocks = String(Number(main.dataset.pluginDocks ?? 0) + 1);
   main.classList.add('tify-plugin-has-dock');
 
-  let disposed = false;
   let open = false;
   let prevView: string | null = null;
   let internal = false;
@@ -191,6 +240,8 @@ export function dockPanel(options: DockOptions): DockHandle | null {
     },
     destroy() {
       disposed = true;
+      observer.disconnect();
+      resizeObserver.disconnect();
       window.clearInterval(timer);
       button.remove();
       const remaining = Math.max(0, Number(main.dataset.pluginDocks ?? 1) - 1);

@@ -19,18 +19,50 @@ test('docks a Document panel and reports the page status', async ({ page }) => {
   await expect(page.locator('#panel')).toContainText('Mock Book');
 });
 
-test('shows a code example with the panel toggle and docs link', async ({ page }) => {
+test('docks its button into the view group and shows a code example', async ({ page }) => {
+  // Wide viewer: TIFY lays the -view group out inline (the -toggle group is
+  // display:none), so the dock button belongs there as its last element.
+  await page.setViewportSize({ width: 2400, height: 900 });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  // In-viewer toggle for the docked panel, carrying the plugin glyph.
-  const toggle = page.locator('#toggle-panel');
-  await expect(toggle).toBeVisible();
-  await expect(toggle.locator('svg')).toBeAttached();
-  // Toggle hides and re-shows the docked panel.
+  const button = page.locator('.tify-plugin-dock-btn');
+  await expect(button).toHaveCount(1);
+  // Poll: the placement settles once TIFY's header has finished rendering and
+  // the container-query layout has been applied.
+  await expect
+    .poll(async () =>
+      button.evaluate((el) => ({
+        parentClass: el.parentElement?.className ?? '',
+        isLastChild: el.parentElement?.lastElementChild === el,
+        groupHasOtherButtons: (el.parentElement?.childElementCount ?? 0) > 1,
+        visible: (el as HTMLElement).offsetParent !== null,
+      })),
+    )
+    .toMatchObject({
+      parentClass: expect.stringContaining('-view'),
+      isLastChild: true,
+      groupHasOtherButtons: true,
+      visible: true,
+    });
+
+  // Narrow viewer: TIFY's container query hides the -view group (it sits
+  // inside the view dropdown) and shows -toggle — the button must follow.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect
+    .poll(async () =>
+      button.evaluate((el) => ({
+        parentClass: el.parentElement?.className ?? '',
+        visible: (el as HTMLElement).offsetParent !== null,
+      })),
+    )
+    .toMatchObject({ parentClass: expect.stringContaining('-toggle'), visible: true });
+
+  // The button toggles the docked panel.
   await expect(page.locator('#panel')).toBeVisible();
-  await toggle.click();
+  await button.click();
   await expect(page.locator('#panel')).toBeHidden();
-  await toggle.click();
+  await button.click();
   await expect(page.locator('#panel')).toBeVisible();
+
   // Code example below the viewer, with a link to the rendered plugin docs.
   const code = page.locator('details.code-example');
   await expect(code).toBeVisible();

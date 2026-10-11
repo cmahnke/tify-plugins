@@ -3,7 +3,6 @@ import '@projektemacher/tify-plugin-core/style.css';
 import Tify from 'tify';
 import {
   COOKBOOK_MANIFEST,
-  DOCK_ICONS,
   TIFY_TRANSLATIONS_URL,
   applyStaticTranslations,
   createTranslator,
@@ -84,15 +83,6 @@ for (const box of [showTrust, editTrust]) {
       manifestInput.value.trim() === '' ? COOKBOOK_MANIFEST : manifestInput.value,
       trustConfig(),
     );
-  });
-}
-
-// In-viewer toggle for the docked panel (mirrors TIFY's toolbar dock button).
-const toggle = document.querySelector('#toggle-panel');
-if (toggle) {
-  toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${DOCK_ICONS.shield}</svg>`;
-  toggle.addEventListener('click', () => {
-    document.querySelector('.tify-plugin-dock-btn')?.dispatchEvent(new MouseEvent('click'));
   });
 }
 void load(manifestInput.value, trustConfig());

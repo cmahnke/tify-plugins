@@ -32,7 +32,6 @@
   "Provenance": "Provenienz",
   "Provenance panel": "Provenienzbereich",
   "Show trust anchor URL": "Vertrauensanker-URL anzeigen",
-  "Show/hide panel": "Panel ein-/ausblenden",
   "Signed by {signer}, checks passed": "Signiert von {signer}, Prüfungen bestanden",
   "This tile could not be checked": "Diese Kachel konnte nicht geprüft werden",
   "Tile bytes unreachable (CORS or network)": "Kachel nicht ladbar (CORS oder Netzwerk)",

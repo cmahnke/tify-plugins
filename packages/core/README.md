@@ -34,6 +34,12 @@ native view closes the dock and vice versa). If TIFY's DOM is not recognized
 plugin takes `dock: true | false | 'auto'` (default `'auto'`). Not portable:
 number-key shortcuts and URL view state don't cover docked panels.
 
+The button is appended as the **last element of the primary `-view` header
+group**. That container is the one TIFY 0.36 keeps visible: on wide viewers it
+sits inline with TIFY's own view buttons, on narrow viewers it lives inside
+the view dropdown. Because the group is re-rendered by TIFY when the available
+views change, a MutationObserver re-appends the button if TIFY drops it.
+
 ## i18n
 
 TIFY conventions: English source strings are the keys; lookup precedence is

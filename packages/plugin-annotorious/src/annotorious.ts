@@ -211,8 +211,12 @@ export async function annotoriousPlugin(
           // Skip annotations the adapter cannot parse.
         }
       });
-      // Swap rendered state only once the replacement is ready.
-      anno?.clearAnnotations();
+      // Drop rendered state only once the replacement is ready. NB: the
+      // silent sync path (below) also removes annotations that are gone, so
+      // no clearAnnotations() call is needed here — clearing dispatches a
+      // LOCAL-origin change, which crashes Annotorious' history reconciler
+      // when the very first annotation event lands within its 250ms window
+      // (upstream bug, still present in @annotorious/openseadragon 3.9.4).
       entries = next;
       anno?.setAnnotations(parsed, true);
       if (tbody) {

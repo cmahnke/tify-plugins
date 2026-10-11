@@ -1,7 +1,7 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import Tify from 'tify';
-import { DOCK_ICONS, TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
+import { TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
 import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
 import { enableHdrCanvasOnce, hdrPlugin, type HdrPlugin } from '@projektemacher/tify-plugin-hdr';
 
@@ -20,15 +20,6 @@ const { lang, t } = await createTranslator(undefined, { de });
 applyStaticTranslations(t, lang);
 const manifestInput = document.querySelector('#manifest') as HTMLInputElement;
 manifestInput.value = params.get('manifest') ?? DEFAULT_HDR_MANIFEST;
-
-// In-viewer toggle for the docked panel (mirrors TIFY's toolbar dock button).
-const toggle = document.querySelector('#toggle-panel');
-if (toggle) {
-  toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${DOCK_ICONS.image}</svg>`;
-  toggle.addEventListener('click', () => {
-    document.querySelector('.tify-plugin-dock-btn')?.dispatchEvent(new MouseEvent('click'));
-  });
-}
 
 // CRITICAL ORDER: hook getContext before TIFY creates its OpenSeadragon canvas.
 // The result is passed to the plugin, which explains the setup state in the panel.

@@ -167,36 +167,6 @@ body {
   }
 }
 
-/* In-viewer panel toggle (docked-panel examples): floating icon button over
-   the viewer's top-right corner, mirroring the TIFY toolbar dock button. */
-.panel-toggle {
-  position: absolute;
-  top: calc(var(--gap) * 0.5);
-  right: calc(var(--gap) * 0.5);
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 1px solid #8883;
-  border-radius: 0.4rem;
-  background: light-dark(#fff, #333);
-  color: inherit;
-  cursor: pointer;
-}
-
-.panel-toggle svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  fill: currentcolor;
-}
-
-.panel-toggle[aria-pressed='false'] {
-  opacity: 0.75;
-}
-
 /* Code example below the viewer */
 .code-example {
   margin-top: var(--gap);
