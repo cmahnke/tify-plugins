@@ -14,9 +14,16 @@
 // location through `pixelFromPoint()`, which requires a Point: rectangles
 // are expressed as a top-left Point plus viewport-unit width/height.
 import type Tify from 'tify';
-import { getManifest, getPages, onPagesChange, waitReady } from '@projektemacher/tify-plugin-core';
+import {
+  createSidePanel,
+  getManifest,
+  getPages,
+  onPagesChange,
+  waitReady,
+} from '@projektemacher/tify-plugin-core';
+import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
 import { createTranslator } from '@projektemacher/tify-plugin-core';
-import type { TifyPlugin } from '@projektemacher/tify-plugin-core';
+import type { SidePanel, TifyPlugin } from '@projektemacher/tify-plugin-core';
 import { fetchTeiPageCached, type TeiOptions, type TeiWordBox } from './tei';
 
 export interface ImageOverlaysOptions {
@@ -24,6 +31,31 @@ export interface ImageOverlaysOptions {
   markers?: number;
   /** TEI word boxes; `false` disables TEI and always shows demo markers. */
   tei?: false | TeiOptions;
+  /** Host element for the overlay controls panel. Omit for overlay-only mode. */
+  panelEl?: HTMLElement | null;
+  /**
+   * 'auto' (default): dock into TIFY when recognized, else sidecar.
+   * true: dock or throw. false: never dock. Ignored without panelEl.
+   */
+  dock?: boolean | 'auto';
+  /** Open the docked panel after init (default true). */
+  autoOpen?: boolean;
+}
+
+/** `#rrggbb` (or `#rgb`) plus alpha as an `rgba()` string. */
+function rgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const full =
+    clean.length === 3
+      ? clean
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : clean;
+  const r = Number.parseInt(full.slice(0, 2), 16);
+  const g = Number.parseInt(full.slice(2, 4), 16);
+  const b = Number.parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 export async function imageOverlaysPlugin(
@@ -39,6 +71,21 @@ export async function imageOverlaysPlugin(
   const { t } = await createTranslator(tify, { de });
   const count = options.markers ?? 3;
   const teiOpts = options.tei === false ? null : (options.tei ?? {});
+  const panel: SidePanel | null = options.panelEl
+    ? createSidePanel(options.panelEl, t('Overlays'))
+    : null;
+  const dock: DockHandle | null = options.panelEl
+    ? dockPanel({
+        tify,
+        id: 'overlays',
+        label: t('Overlays'),
+        iconSvg: DOCK_ICONS.image,
+        contentEl: options.panelEl,
+        mode: options.dock,
+      })
+    : null;
+  if (options.autoOpen !== false) dock?.open();
+  if (panel) panel.status.textContent = t('Loading…');
   const elements: HTMLElement[] = [];
   let unsubscribe: (() => void) | null = null;
   let disposed = false;
@@ -52,7 +99,131 @@ export async function imageOverlaysPlugin(
     }
     for (const element of elements) element.remove();
     elements.length = 0;
+    selected = null;
   };
+
+  // Sidebar-controlled rendering state. Applied to every overlay at draw
+  // time and re-applied to live elements when a control changes.
+  let showAnnotations = true;
+  let showOutlines = true;
+  let fillColor = '#0b5fff';
+  let fillOpacity = 0.12;
+  let selected: { box: TeiWordBox; element: HTMLElement } | null = null;
+  let pageHasBoxes = false;
+  let readout: HTMLElement | null = null;
+
+  const renderReadout = (): void => {
+    if (!panel || !readout || disposed) return;
+    readout.textContent = selected
+      ? t('Selected: {word}', { word: selected.box.text })
+      : pageHasBoxes
+        ? t('Click a word box to show its text.')
+        : t('No word boxes on this page.');
+  };
+
+  const applyWordStyle = (element: HTMLElement): void => {
+    element.style.backgroundColor = rgba(fillColor, fillOpacity);
+    element.classList.toggle('no-frame', !showOutlines);
+    element.classList.toggle('is-hidden', !showAnnotations);
+  };
+
+  const restyle = (): void => {
+    for (const element of elements) {
+      if (element.classList.contains('tify-plugin-tei-word')) applyWordStyle(element);
+      else element.classList.toggle('is-hidden', !showAnnotations);
+    }
+  };
+
+  const select = (box: TeiWordBox, element: HTMLElement): void => {
+    if (selected && selected.element === element) {
+      element.classList.remove('is-selected');
+      selected = null;
+    } else {
+      selected?.element.classList.remove('is-selected');
+      element.classList.add('is-selected');
+      selected = { box, element };
+    }
+    renderReadout();
+  };
+
+  /**
+   * Tap (not drag) activation for overlays: the OSD canvas captures the
+   * pointer stream for drag detection, so a DOM `click` never fires for
+   * pointer input on overlays — pair pointerdown with a nearby pointerup
+   * instead (drag-safe); keydown covers keyboard activation.
+   */
+  const onTap = (element: HTMLElement, handler: () => void): void => {
+    element.addEventListener('pointerdown', (event) => {
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const onUp = (up: PointerEvent): void => {
+        cleanup();
+        if (Math.hypot(up.clientX - startX, up.clientY - startY) < 5) handler();
+      };
+      const onCancel = (): void => cleanup();
+      const cleanup = (): void => {
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onCancel);
+      };
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onCancel);
+    });
+    element.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handler();
+      }
+    });
+  };
+
+  if (panel) {
+    const controls = document.createElement('div');
+    controls.className = 'tify-plugin-controls';
+    const layerLabel = document.createElement('label');
+    const layerToggle = document.createElement('input');
+    layerToggle.type = 'checkbox';
+    layerToggle.checked = true;
+    layerLabel.append(layerToggle, ' ', t('Show annotations'));
+    layerToggle.addEventListener('change', () => {
+      showAnnotations = layerToggle.checked;
+      restyle();
+    });
+    const frameLabel = document.createElement('label');
+    const frameToggle = document.createElement('input');
+    frameToggle.type = 'checkbox';
+    frameToggle.checked = true;
+    frameLabel.append(frameToggle, ' ', t('Show outlines'));
+    frameToggle.addEventListener('change', () => {
+      showOutlines = frameToggle.checked;
+      restyle();
+    });
+    const colorLabel = document.createElement('label');
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = fillColor;
+    colorLabel.append(colorInput, ' ', t('Fill color'));
+    colorInput.addEventListener('input', () => {
+      fillColor = colorInput.value;
+      restyle();
+    });
+    const opacityLabel = document.createElement('label');
+    const opacityInput = document.createElement('input');
+    opacityInput.type = 'range';
+    opacityInput.min = '0';
+    opacityInput.max = '1';
+    opacityInput.step = '0.05';
+    opacityInput.value = String(fillOpacity);
+    opacityLabel.append(opacityInput, ' ', t('Fill opacity'));
+    opacityInput.addEventListener('input', () => {
+      fillOpacity = Number(opacityInput.value);
+      restyle();
+    });
+    controls.append(layerLabel, frameLabel, colorLabel, opacityLabel);
+    readout = document.createElement('p');
+    readout.className = 'tify-plugin-note';
+    panel.body.append(controls, readout);
+    renderReadout();
+  }
 
   /**
    * Point on TIFY's bundled OpenSeadragon's prototype chain. The viewer's
@@ -107,6 +278,7 @@ export async function imageOverlaysPlugin(
       const x = 0.15 + (index * 0.7) / Math.max(1, count - 1);
       const location = makePoint(viewer, x, 0.12);
       if (!location) return;
+      element.classList.toggle('is-hidden', !showAnnotations);
       viewer.addOverlay({ element, location });
       elements.push(element);
     }
@@ -120,6 +292,11 @@ export async function imageOverlaysPlugin(
       const element = document.createElement('div');
       element.className = 'tify-plugin-tei-word';
       element.title = box.text;
+      element.tabIndex = 0;
+      element.setAttribute('role', 'button');
+      element.setAttribute('aria-label', box.text);
+      applyWordStyle(element);
+      onTap(element, () => select(box, element));
       const rect = tiledImage.imageToViewportRectangle(box.x, box.y, box.w, box.h);
       // Top-left anchored box: Point location + viewport-unit size.
       const location = makePoint(viewer, rect.x, rect.y);
@@ -150,6 +327,9 @@ export async function imageOverlaysPlugin(
           if (token !== drawToken || disposed) return;
           if (teiPage && teiPage.boxes.length > 0) {
             drawTeiBoxes(teiPage.boxes);
+            pageHasBoxes = true;
+            if (panel) panel.status.textContent = t('TEI word boxes');
+            renderReadout();
             return;
           }
         }
@@ -159,6 +339,9 @@ export async function imageOverlaysPlugin(
       if (token !== drawToken || disposed) return;
     }
     drawMarkers(pages);
+    pageHasBoxes = false;
+    if (panel) panel.status.textContent = t('Demo markers');
+    renderReadout();
   };
 
   const draw = (): void => {
@@ -179,6 +362,11 @@ export async function imageOverlaysPlugin(
         tify.viewer?.removeHandler?.('open', onOpen);
       } catch {
         // Ignore teardown races.
+      }
+      dock?.destroy();
+      if (options.panelEl) {
+        options.panelEl.classList.remove('tify-plugin-panel');
+        options.panelEl.innerHTML = '';
       }
       clear();
     },

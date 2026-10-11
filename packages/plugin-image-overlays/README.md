@@ -26,6 +26,20 @@ const plugin = await imageOverlaysPlugin(tify, {
 });
 ```
 
+## Overlay panel
+
+Pass `panelEl` to get a sidebar with live rendering controls: show/hide
+the annotation layer, show/hide the box outlines, box fill color and
+opacity — plus the clicked word's text. Clicking a word box selects it;
+clicking again deselects. The panel docks into the viewer header.
+
+```ts
+const plugin = await imageOverlaysPlugin(tify, {
+  markers: 3,
+  panelEl: document.querySelector('#panel'),
+});
+```
+
 ## Example
 
 `example/` — TEI word boxes or demo markers, synced to pages. Run `npm run

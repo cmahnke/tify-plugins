@@ -32,3 +32,43 @@ test('opens with the live TEI demo by default', async ({ page }) => {
   await expect(words.first()).toHaveAttribute('title', 'Gänseliesel');
   await expect(words.nth(1)).toHaveAttribute('title', 'Brunnen');
 });
+
+test('clicking a word box shows its text in the sidebar', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
+  await page.goto(EXAMPLE);
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect(words).toHaveCount(2);
+  await words.first().click();
+  await expect(words.first()).toHaveClass(/is-selected/);
+  await expect(page.locator('#panel .tify-plugin-note')).toHaveText('Selected: Gänseliesel');
+});
+
+test('sidebar toggles annotations and outlines', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
+  await page.goto(EXAMPLE);
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect(words).toHaveCount(2);
+  await page.getByRole('checkbox', { name: 'Show outlines' }).uncheck();
+  await expect
+    .poll(() => words.first().evaluate((el) => getComputedStyle(el).outlineStyle))
+    .toBe('none');
+  // The fill stays on while the frame is hidden.
+  await expect
+    .poll(() => words.first().evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toMatch(/rgba\(11, 95, 255, 0\.12\)/);
+  await page.getByRole('checkbox', { name: 'Show annotations' }).uncheck();
+  await expect(words.first()).toBeHidden();
+  await expect(words.nth(1)).toBeHidden();
+});
+
+test('fill color and opacity restyle the boxes', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
+  await page.goto(EXAMPLE);
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect(words).toHaveCount(2);
+  await page.locator('#panel input[type="color"]').fill('#ff0000');
+  await page.locator('#panel input[type="range"]').fill('0.5');
+  await expect
+    .poll(() => words.first().evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toBe('rgba(255, 0, 0, 0.5)');
+});

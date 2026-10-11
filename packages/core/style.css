@@ -305,6 +305,41 @@ body {
   background: rgb(11 95 255 / 32%);
 }
 
+.tify-plugin-tei-word.is-selected {
+  outline: 2px solid rgb(11 95 255);
+}
+
+.tify-plugin-tei-word.no-frame,
+.tify-plugin-tei-word.no-frame:hover {
+  outline: none;
+}
+
+.tify-plugin-tei-word.is-hidden,
+.tify-plugin-marker.is-hidden {
+  /* !important: OSD positions overlays with inline display/width/height,
+     which would otherwise beat the stylesheet. */
+  display: none !important;
+}
+
+.tify-plugin-controls label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.tify-plugin-controls input[type='color'] {
+  padding: 0;
+  border: none;
+  width: 2rem;
+  height: 1.5rem;
+}
+
+.tify-plugin-controls input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Docked panels inside .tify-main + header-button-style badges/buttons.
    NB: TIFY lays out its view sections (including .tify-media) absolutely
    over .tify-main, so a docked panel can never sit *beside* the media as a
