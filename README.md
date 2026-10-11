@@ -54,12 +54,13 @@ examples actually load — is authored separately (IIIF Cookbook style).
 
 ## Examples
 
-Every plugin package ships its own example under `packages/*/example/`. The root demo
-(`index.html`) is a catalog linking them all:
+Every workspace ships its own example under `packages/*/example/` — the six
+plugin packages plus core's info panel. The root demo (`index.html`) is a
+catalog linking them all:
 
 ```sh
 npm run dev      # http://localhost:5173/  (catalog)
-                 # /packages/plugin-side-panel/example/, /packages/plugin-hdr/example/, …
+                 # /packages/plugin-side-panel/example/, /packages/core/example/, …
 ```
 
 Examples always run against the workspace sources (dev aliases); production

@@ -10,6 +10,7 @@ test('catalog lists every example plus the docs', async ({ page }) => {
     'plugin-hdr',
     'plugin-c2pa',
     'plugin-musicxml',
+    'core',
   ]) {
     await expect(page.locator(`a[href="./packages/${pkg}/example/"]`)).toBeVisible();
   }
@@ -19,7 +20,7 @@ test('catalog lists every example plus the docs', async ({ page }) => {
 test('every example card carries a description', async ({ page }) => {
   await page.goto('/');
   const cards = page.locator('.card');
-  await expect(cards).toHaveCount(7);
+  await expect(cards).toHaveCount(8);
   for (const card of await cards.all()) {
     const heading = card.locator('h2');
     await expect(heading).not.toBeEmpty();
