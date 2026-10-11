@@ -25,6 +25,16 @@ const demoUrl = new URL(
 ).toString();
 input.value = params.get('manifest') ?? demoUrl;
 
+// Optional rendering initials (undefined when absent, so plugin defaults apply).
+const showAnnotations = params.has('annotations') ? params.get('annotations') !== '0' : undefined;
+const showOutlines = params.has('outlines') ? params.get('outlines') !== '0' : undefined;
+const fillParam = params.get('fill');
+const fillColor =
+  fillParam && /^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(fillParam) ? fillParam : undefined;
+const opacityParam = params.get('opacity');
+const opacityValue = opacityParam === null ? Number.NaN : Number.parseFloat(opacityParam);
+const fillOpacity = Number.isFinite(opacityValue) ? opacityValue : undefined;
+
 let tify: Tify | null = null;
 let plugin: TifyPlugin | null = null;
 
@@ -43,6 +53,10 @@ async function load(manifestUrl: string): Promise<void> {
     plugin = await imageOverlaysPlugin(tify, {
       markers: 3,
       panelEl: document.querySelector('#panel') as HTMLElement,
+      showAnnotations,
+      showOutlines,
+      fillColor,
+      fillOpacity,
     });
   } catch (error) {
     console.error(error);

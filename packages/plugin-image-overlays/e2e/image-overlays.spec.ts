@@ -84,3 +84,31 @@ test('fill color and opacity restyle the boxes', async ({ page }) => {
     .poll(() => words.first().evaluate((el) => getComputedStyle(el).backgroundColor))
     .toBe('rgba(255, 0, 0, 0.5)');
 });
+
+test('opacity slider stays visible when docked inside TIFY', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
+  await page.goto(EXAMPLE);
+  const slider = page.locator('#panel input[type="range"]');
+  await expect(slider).toBeVisible();
+  // TIFY skins every [type=range] under .tify as its own scan slider
+  // (~6px stump, invisible thumb); ours must render taller than that.
+  // Engine-agnostic: pseudo-element computed styles aren't queryable everywhere.
+  const box = await slider.boundingBox();
+  expect(box?.height).toBeGreaterThan(6);
+});
+
+test('URL params initialize rendering state via the API', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
+  await page.goto(
+    `${EXAMPLE}?annotations=0&outlines=0&fill=${encodeURIComponent('#ff0000')}&opacity=0.5`,
+  );
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect(words).toHaveCount(2);
+  await expect
+    .poll(() => words.first().evaluate((el) => getComputedStyle(el).backgroundColor))
+    .toBe('rgba(255, 0, 0, 0.5)');
+  await expect(page.locator('#panel input[type="color"]')).toHaveValue('#ff0000');
+  await expect(page.locator('#panel input[type="range"]')).toHaveValue('0.5');
+  await expect(page.getByRole('checkbox', { name: 'Show annotations' })).not.toBeChecked();
+  await expect(page.getByRole('checkbox', { name: 'Show outlines' })).not.toBeChecked();
+});

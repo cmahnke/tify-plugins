@@ -37,8 +37,17 @@ clicking again deselects. The panel docks into the viewer header.
 const plugin = await imageOverlaysPlugin(tify, {
   markers: 3,
   panelEl: document.querySelector('#panel'),
+  showAnnotations: true,
+  showOutlines: true,
+  fillColor: '#0b5fff',
+  fillOpacity: 0.12,
 });
 ```
+
+`showAnnotations` / `showOutlines` initialize the layer and outline
+toggles, `fillColor` (`#rgb`/`#rrggbb`, sanitized) and `fillOpacity`
+(clamped 0–1) the fill controls. The sidebar keeps working two-ways
+afterwards.
 
 ## Example
 
@@ -46,6 +55,8 @@ const plugin = await imageOverlaysPlugin(tify, {
 dev` at the repo root and open `/packages/plugin-image-overlays/example/`;
 it opens with the live TEI demo (`public/demo/tei/manifest.json` +
 `tei.xml`: word boxes over cookbook tiles, also served from the built app).
+Append `?lang=de` for German strings, `?annotations=0` / `?outlines=0` to
+start hidden, `?fill=%23ff0000` / `?opacity=0.5` for the initial fill.
 The dev-only local fixture
 `http://localhost:5173/packages/plugin-image-overlays/example/tei-fixture/manifest.json`
 shows the same wiring.

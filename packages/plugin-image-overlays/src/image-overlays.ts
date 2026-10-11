@@ -40,6 +40,14 @@ export interface ImageOverlaysOptions {
   dock?: boolean | 'auto';
   /** Open the docked panel after init (default true). */
   autoOpen?: boolean;
+  /** Show the annotation layer initially (default true). */
+  showAnnotations?: boolean;
+  /** Show box outlines initially (default true). */
+  showOutlines?: boolean;
+  /** Box fill color as `#rgb`/`#rrggbb`, sanitized (default '#0b5fff'). */
+  fillColor?: string;
+  /** Box fill opacity, clamped 0–1 (default 0.12). */
+  fillOpacity?: number;
 }
 
 /** `#rrggbb` (or `#rgb`) plus alpha as an `rgba()` string. */
@@ -56,6 +64,24 @@ function rgba(hex: string, alpha: number): string {
   const g = Number.parseInt(full.slice(2, 4), 16);
   const b = Number.parseInt(full.slice(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Sanitize `#rgb`/`#rrggbb` to lowercase `#rrggbb`, else the default. */
+function normalizeFillColor(value: unknown): string {
+  if (typeof value !== 'string') return '#0b5fff';
+  const v = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{3}$/.test(v)) {
+    return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+  }
+  if (/^#[0-9a-f]{6}$/.test(v)) return v;
+  return '#0b5fff';
+}
+
+/** Clamp to 0–1, else the default. */
+function clampFillOpacity(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return 0.12;
+  return Math.min(1, Math.max(0, n));
 }
 
 export async function imageOverlaysPlugin(
@@ -104,10 +130,10 @@ export async function imageOverlaysPlugin(
 
   // Sidebar-controlled rendering state. Applied to every overlay at draw
   // time and re-applied to live elements when a control changes.
-  let showAnnotations = true;
-  let showOutlines = true;
-  let fillColor = '#0b5fff';
-  let fillOpacity = 0.12;
+  let showAnnotations = options.showAnnotations ?? true;
+  let showOutlines = options.showOutlines ?? true;
+  let fillColor = normalizeFillColor(options.fillColor ?? '#0b5fff');
+  let fillOpacity = clampFillOpacity(options.fillOpacity ?? 0.12);
   let selected: { box: TeiWordBox; element: HTMLElement } | null = null;
   let pageHasBoxes = false;
   let readout: HTMLElement | null = null;
@@ -182,7 +208,7 @@ export async function imageOverlaysPlugin(
     const layerLabel = document.createElement('label');
     const layerToggle = document.createElement('input');
     layerToggle.type = 'checkbox';
-    layerToggle.checked = true;
+    layerToggle.checked = showAnnotations;
     layerLabel.append(layerToggle, ' ', t('Show annotations'));
     layerToggle.addEventListener('change', () => {
       showAnnotations = layerToggle.checked;
@@ -191,7 +217,7 @@ export async function imageOverlaysPlugin(
     const frameLabel = document.createElement('label');
     const frameToggle = document.createElement('input');
     frameToggle.type = 'checkbox';
-    frameToggle.checked = true;
+    frameToggle.checked = showOutlines;
     frameLabel.append(frameToggle, ' ', t('Show outlines'));
     frameToggle.addEventListener('change', () => {
       showOutlines = frameToggle.checked;
