@@ -92,6 +92,8 @@ const style = `
   .docs .hljs-built_in, .docs .hljs-literal { color: light-dark(#8250df, #d2a8ff); }
   .docs .hljs-attr { color: light-dark(#0550ae, #79c0ff); }
   .docs .hljs-comment { color: light-dark(#59636e, #9198a1); font-style: italic; }
+  .docs .hljs-tag { color: light-dark(#59636e, #9198a1); }
+  .docs .hljs-name { color: light-dark(#06b, #4c9aff); }
   .docs table { border-collapse: collapse; }
   .docs th, .docs td { text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid #8883; }
   .docs img { max-width: 100%; }

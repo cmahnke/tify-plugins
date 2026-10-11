@@ -2,6 +2,7 @@ import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import hljs from 'highlight.js/lib/core';
 import typescript from 'highlight.js/lib/languages/typescript';
+import xml from 'highlight.js/lib/languages/xml';
 import Tify from 'tify';
 import { TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
 import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
@@ -9,6 +10,7 @@ import { enableHdrCanvasOnce, hdrPlugin, type HdrPlugin } from '@projektemacher/
 
 // Syntax-highlight the static code example below the viewer.
 hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('xml', xml);
 hljs.highlightAll();
 
 // The 70s wallpaper UltraHDR manifest: single canvas, Image API 2 service

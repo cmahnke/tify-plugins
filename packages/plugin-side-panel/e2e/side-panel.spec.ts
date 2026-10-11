@@ -78,6 +78,9 @@ test('docks its button into the view group and shows a code example', async ({ p
   // even while the details element is still collapsed).
   await expect(code.locator('code span.hljs-keyword').first()).toBeAttached();
   await expect(code.locator('code span.hljs-string').first()).toBeAttached();
+  // The host markup block shows where #panel comes from, highlighted as XML.
+  await expect(code).toContainText('<aside id="panel">');
+  await expect(code.locator('code.language-xml span.hljs-name').first()).toHaveText('div');
   const docsLink = code.locator('a[href="../../../docs/plugin-side-panel.html"]');
   await expect(docsLink).toBeAttached();
   await code.locator('summary').click(); // expand → link becomes visible

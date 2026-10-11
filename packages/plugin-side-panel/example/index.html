@@ -31,11 +31,14 @@
       </div>
       <details class="code-example">
         <summary data-i18n="Code example">Code example</summary>
+        <pre><code class="language-xml">&lt;!-- Viewer and panel hosts in your markup --&gt;
+&lt;div id="tify"&gt;&lt;/div&gt;
+&lt;aside id="panel"&gt;&lt;/aside&gt;</code></pre>
         <pre><code class="language-typescript">import Tify from 'tify';
 import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
 
 const tify = new Tify({ container: '#tify', manifestUrl });
-// Panel host in your markup; the plugin fills it and docks
+// The plugin fills the #panel host above and docks
 // a toggle button into the viewer header.
 const plugin = await sidePanelPlugin(tify, {
   panelEl: document.querySelector('#panel'),

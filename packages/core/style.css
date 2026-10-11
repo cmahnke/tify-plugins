@@ -515,4 +515,12 @@ body {
   color: light-dark(#59636e, #9198a1);
   font-style: italic;
 }
+
+.code-example .hljs-tag {
+  color: light-dark(#59636e, #9198a1);
+}
+
+.code-example .hljs-name {
+  color: light-dark(#06b, #4c9aff);
+}
 /* stylelint-enable selector-class-pattern */
