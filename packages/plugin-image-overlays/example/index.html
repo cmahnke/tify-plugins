@@ -34,7 +34,14 @@
 import { imageOverlaysPlugin } from '@projektemacher/tify-plugin-image-overlays';
 
 const tify = new Tify({ container: '#tify', manifestUrl });
-const plugin = await imageOverlaysPlugin(tify, { markers: 3 });</code></pre>
+const plugin = await imageOverlaysPlugin(tify, {
+  markers: 3,
+  panelEl: document.querySelector('#panel'),
+  showAnnotations: true,
+  showOutlines: true,
+  fillColor: '#0b5fff',
+  fillOpacity: 0.12,
+});</code></pre>
         <p class="code-links">
           <a href="../../../docs/plugin-image-overlays.html" data-i18n="Documentation"
             >Documentation</a
