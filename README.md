@@ -43,23 +43,23 @@ can be generated with [fliiifenleger](https://github.com/cmahnke/fliiifenleger/)
 a static Java IIIF tiler. The wrapping Presentation manifest — what the
 examples actually load — is authored separately (IIIF Cookbook style).
 
-| Package                          | fliiifenleger settings                                                                                                                                                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| core, side-panel, basic examples | [`generate`](https://github.com/cmahnke/fliiifenleger#generate) with `--iiif-version V3` — any plain image service works                                                                                                        |
-| image-overlays                   | same as above; the TEI transcription linked via canvas `seeAlso` is authored separately (not a fliiifenleger feature)                                                                                                           |
-| hdr                              | [`--source ultrahdr --sink ultrahdr`](https://github.com/cmahnke/fliiifenleger#ultrahdr-gain-map-tiling) — UltraHDR tiles advertise exactly the `https://christianmahnke.de/iiif/hdr/` service this plugin detects              |
-| c2pa                             | [`--sink c2pa`](https://github.com/cmahnke/fliiifenleger#c2pa-content-credentials) with `--iiif-version V3`; `--sink-opt trust-anchor=…` advertises the `trustAnchor` URI this plugin's `trustAnchors` option validates against |
-| annotorious                      | default `generate`; the `xywh` annotations are added afterwards at the Presentation-manifest level                                                                                                                              |
-| musicxml                         | score data (MusicXML + staff grids) comes from the [homr OMR pipeline](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher); image services themselves are plain `generate` output                                         |
+| Package                    | fliiifenleger settings                                                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| side-panel, basic examples | [`generate`](https://github.com/cmahnke/fliiifenleger#generate) with `--iiif-version V3` — any plain image service works                                                                                                        |
+| image-overlays             | same as above; the TEI transcription linked via canvas `seeAlso` is authored separately (not a fliiifenleger feature)                                                                                                           |
+| hdr                        | [`--source ultrahdr --sink ultrahdr`](https://github.com/cmahnke/fliiifenleger#ultrahdr-gain-map-tiling) — UltraHDR tiles advertise exactly the `https://christianmahnke.de/iiif/hdr/` service this plugin detects              |
+| c2pa                       | [`--sink c2pa`](https://github.com/cmahnke/fliiifenleger#c2pa-content-credentials) with `--iiif-version V3`; `--sink-opt trust-anchor=…` advertises the `trustAnchor` URI this plugin's `trustAnchors` option validates against |
+| annotorious                | default `generate`; the `xywh` annotations are added afterwards at the Presentation-manifest level                                                                                                                              |
+| musicxml                   | score data (MusicXML + staff grids) comes from the [homr OMR pipeline](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher); image services themselves are plain `generate` output                                         |
 
 ## Examples
 
-Every package ships its own example under `packages/*/example/`. The root demo
+Every plugin package ships its own example under `packages/*/example/`. The root demo
 (`index.html`) is a catalog linking them all:
 
 ```sh
 npm run dev      # http://localhost:5173/  (catalog)
-                 # /packages/core/example/, /packages/plugin-hdr/example/, …
+                 # /packages/plugin-side-panel/example/, /packages/plugin-hdr/example/, …
 ```
 
 Examples always run against the workspace sources (dev aliases); production

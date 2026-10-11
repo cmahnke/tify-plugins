@@ -34,8 +34,7 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test:i18n": "node ../../scripts/check-i18n.js .",
-    "test:e2e": "playwright test",
-    "lint": "eslint . && stylelint \"style.css\" && prettier --check src example e2e package.json README.md style.css"
+    "lint": "eslint . && stylelint \"style.css\" && prettier --check src package.json README.md style.css"
   },
   "peerDependencies": {
     "tify": "0.36.2"

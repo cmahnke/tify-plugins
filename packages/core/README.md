@@ -63,10 +63,11 @@ repo root): fails on missing, unused, empty, or mis-sorted entries.
 
 Peer dependency: `tify` (the viewer provides the single instance).
 
-## Example
+## Examples using core
 
-`example/` — minimal TIFY embed with a manifest URL box. Run `npm run dev` at
-the repo root and open `/packages/core/example/`.
+Core is a library with no page of its own; the plugin examples exercise
+its panel, dock, i18n, and IIIF helpers. `packages/plugin-side-panel`
+is the smallest one to start from.
 
 ## Manifest generation
 
