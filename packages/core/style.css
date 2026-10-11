@@ -299,6 +299,18 @@ body {
 .tify-plugin-tei-word {
   outline: 1px solid rgb(11 95 255 / 80%);
   background: rgb(11 95 255 / 12%);
+  color: #10243f;
+  overflow: hidden;
+}
+
+.tify-plugin-tei-word svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tify-plugin-tei-word text {
+  fill: currentcolor;
 }
 
 .tify-plugin-tei-word:hover {
@@ -338,6 +350,13 @@ body {
 .tify-plugin-controls input[type='range'] {
   flex: 1;
   min-width: 0;
+}
+
+.tify-plugin-controls .color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
 }
 
 /* Docked panels inside .tify-main + header-button-style badges/buttons.

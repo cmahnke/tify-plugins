@@ -31,6 +31,18 @@ test('opens with the live TEI demo by default', async ({ page }) => {
   await expect(words).toHaveCount(2);
   await expect(words.first()).toHaveAttribute('title', 'Gänseliesel');
   await expect(words.nth(1)).toHaveAttribute('title', 'Brunnen');
+  // Word text renders inside the boxes and fits them at any zoom.
+  await expect(words.first()).toContainText('Gänseliesel');
+  await expect(words.nth(1)).toContainText('Brunnen');
+  await expect
+    .poll(() =>
+      words.evaluateAll((els) =>
+        els.every(
+          (el) => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1,
+        ),
+      ),
+    )
+    .toBe(true);
 });
 
 test('clicking a word box shows its text in the sidebar', async ({ page }) => {

@@ -197,28 +197,32 @@ export async function imageOverlaysPlugin(
       showOutlines = frameToggle.checked;
       restyle();
     });
-    const colorLabel = document.createElement('label');
+    const colorRow = document.createElement('div');
+    colorRow.className = 'color-row';
+    const colorName = document.createElement('span');
+    colorName.textContent = t('Fill color');
     const colorInput = document.createElement('input');
     colorInput.type = 'color';
     colorInput.value = fillColor;
-    colorLabel.append(colorInput, ' ', t('Fill color'));
+    colorInput.setAttribute('aria-label', t('Fill color'));
+    colorRow.append(colorName, colorInput);
     colorInput.addEventListener('input', () => {
       fillColor = colorInput.value;
       restyle();
     });
-    const opacityLabel = document.createElement('label');
     const opacityInput = document.createElement('input');
     opacityInput.type = 'range';
     opacityInput.min = '0';
     opacityInput.max = '1';
     opacityInput.step = '0.05';
     opacityInput.value = String(fillOpacity);
-    opacityLabel.append(opacityInput, ' ', t('Fill opacity'));
+    opacityInput.setAttribute('aria-label', t('Fill opacity'));
+    colorRow.append(opacityInput);
     opacityInput.addEventListener('input', () => {
       fillOpacity = Number(opacityInput.value);
       restyle();
     });
-    controls.append(layerLabel, frameLabel, colorLabel, opacityLabel);
+    controls.append(layerLabel, frameLabel, colorRow);
     readout = document.createElement('p');
     readout.className = 'tify-plugin-note';
     panel.body.append(controls, readout);
@@ -288,6 +292,7 @@ export async function imageOverlaysPlugin(
     const viewer = tify.viewer;
     const tiledImage = viewer?.world?.getItemAt?.(0);
     if (!viewer || typeof tiledImage?.imageToViewportRectangle !== 'function') return;
+    const SVG_NS = 'http://www.w3.org/2000/svg';
     for (const box of boxes) {
       const element = document.createElement('div');
       element.className = 'tify-plugin-tei-word';
@@ -297,6 +302,22 @@ export async function imageOverlaysPlugin(
       element.setAttribute('aria-label', box.text);
       applyWordStyle(element);
       onTap(element, () => select(box, element));
+      // Word text inside the box, force-fitted via SVG textLength: the
+      // vector scales with the box, so the fit holds at every zoom
+      // without listeners or measurement.
+      const svg = document.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('viewBox', `0 0 ${box.w} ${box.h}`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('aria-hidden', 'true');
+      const label = document.createElementNS(SVG_NS, 'text');
+      label.setAttribute('x', '0');
+      label.setAttribute('y', String(box.h * 0.8));
+      label.setAttribute('font-size', String(box.h * 0.8));
+      label.setAttribute('textLength', String(box.w));
+      label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      label.textContent = box.text;
+      svg.append(label);
+      element.append(svg);
       const rect = tiledImage.imageToViewportRectangle(box.x, box.y, box.w, box.h);
       // Top-left anchored box: Point location + viewport-unit size.
       const location = makePoint(viewer, rect.x, rect.y);
