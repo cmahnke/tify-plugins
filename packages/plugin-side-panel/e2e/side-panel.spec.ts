@@ -74,6 +74,10 @@ test('docks its button into the view group and shows a code example', async ({ p
   // The snippet shows the panel contents built programmatically.
   await expect(code).toContainText('createSidePanel');
   await expect(code).toContainText('panel.body.append');
+  // The snippet is syntax-highlighted (highlight.js runs on page load,
+  // even while the details element is still collapsed).
+  await expect(code.locator('code span.hljs-keyword').first()).toBeAttached();
+  await expect(code.locator('code span.hljs-string').first()).toBeAttached();
   const docsLink = code.locator('a[href="../../../docs/plugin-side-panel.html"]');
   await expect(docsLink).toBeAttached();
   await code.locator('summary').click(); // expand → link becomes visible

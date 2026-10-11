@@ -477,3 +477,42 @@ body {
   background: none;
   padding: 0;
 }
+
+/* Syntax highlighting (highlight.js) for the static code examples.
+   Transparent background blends with the surrounding pre; token colors
+   follow the repo palette and adapt to light/dark via light-dark().
+   Class names are highlight.js's own (underscores), not ours. */
+/* stylelint-disable selector-class-pattern */
+.code-example .hljs-keyword {
+  color: light-dark(#06b, #4c9aff);
+}
+
+.code-example .hljs-string,
+.code-example .hljs-regexp {
+  color: light-dark(#1a7f37, #4ade80);
+}
+
+.code-example .hljs-number {
+  color: light-dark(#0550ae, #79c0ff);
+}
+
+.code-example .hljs-title,
+.code-example .hljs-title.class_,
+.code-example .hljs-title.function_ {
+  color: light-dark(#0b5fff, #7aa8ff);
+}
+
+.code-example .hljs-built_in,
+.code-example .hljs-literal {
+  color: light-dark(#8250df, #d2a8ff);
+}
+
+.code-example .hljs-attr {
+  color: light-dark(#0550ae, #79c0ff);
+}
+
+.code-example .hljs-comment {
+  color: light-dark(#59636e, #9198a1);
+  font-style: italic;
+}
+/* stylelint-enable selector-class-pattern */

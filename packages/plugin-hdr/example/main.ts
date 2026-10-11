@@ -1,9 +1,15 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
+import hljs from 'highlight.js/lib/core';
+import typescript from 'highlight.js/lib/languages/typescript';
 import Tify from 'tify';
 import { TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
 import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
 import { enableHdrCanvasOnce, hdrPlugin, type HdrPlugin } from '@projektemacher/tify-plugin-hdr';
+
+// Syntax-highlight the static code example below the viewer.
+hljs.registerLanguage('typescript', typescript);
+hljs.highlightAll();
 
 // The 70s wallpaper UltraHDR manifest: single canvas, Image API 2 service
 // advertising HDR via the placeholder profile URI. Any manifest URL works

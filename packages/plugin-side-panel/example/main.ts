@@ -1,5 +1,7 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
+import hljs from 'highlight.js/lib/core';
+import typescript from 'highlight.js/lib/languages/typescript';
 import Tify from 'tify';
 import {
   COOKBOOK_MANIFEST,
@@ -9,6 +11,10 @@ import {
 } from '@projektemacher/tify-plugin-core';
 import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
 import type { TifyPlugin } from '@projektemacher/tify-plugin-core';
+
+// Syntax-highlight the static code example below the viewer.
+hljs.registerLanguage('typescript', typescript);
+hljs.highlightAll();
 
 const de = (
   (await import('../src/i18n/translations/de.json')) as unknown as {

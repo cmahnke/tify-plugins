@@ -1,5 +1,7 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
+import hljs from 'highlight.js/lib/core';
+import typescript from 'highlight.js/lib/languages/typescript';
 import Tify from 'tify';
 import {
   COOKBOOK_MANIFEST,
@@ -12,6 +14,10 @@ import {
   c2paPlugin,
   type C2paPlugin,
 } from '@projektemacher/tify-plugin-c2pa';
+
+// Syntax-highlight the static code example below the viewer.
+hljs.registerLanguage('typescript', typescript);
+hljs.highlightAll();
 
 const params = new URLSearchParams(window.location.search);
 const de = (

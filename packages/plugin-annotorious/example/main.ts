@@ -1,10 +1,16 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import '@annotorious/openseadragon/annotorious-openseadragon.css';
+import hljs from 'highlight.js/lib/core';
+import typescript from 'highlight.js/lib/languages/typescript';
 import Tify from 'tify';
 import { TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
 import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
 import { annotoriousPlugin, type AnnotoriousPlugin } from '@projektemacher/tify-plugin-annotorious';
+
+// Syntax-highlight the static code example below the viewer.
+hljs.registerLanguage('typescript', typescript);
+hljs.highlightAll();
 
 export const DEFAULT_ANNOTATED_MANIFEST =
   'https://iiif.io/api/cookbook/recipe/0021-tagging/manifest.json';
