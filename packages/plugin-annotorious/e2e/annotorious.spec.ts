@@ -139,3 +139,27 @@ test('clicking a list row zooms the viewer to the annotation', async ({ page }) 
     .poll(async () => transform.getAttribute('transform'), { timeout: 8000 })
     .not.toBe(before);
 });
+
+test('preset dropdown fills the manifest input and loads', async ({ page }) => {
+  // Stub the cookbook host so the test stays hermetic; the stubbed
+  // manifest points at the mocked image service.
+  await page.route('https://iiif.io/api/cookbook/**', (route) =>
+    route.fulfill({ json: buildManifest({ canvases: 2, annotations: 2 }) }),
+  );
+  await page.goto(EXAMPLE);
+  const select = page.locator('#manifest-preset');
+  await expect(select.locator('option')).toHaveCount(4);
+  await expect(select).toHaveValue(
+    'https://iiif.io/api/cookbook/recipe/0021-tagging/manifest.json',
+  );
+  await select.selectOption(
+    'https://iiif.io/api/cookbook/recipe/0258-tagging-external-resource/manifest.json',
+  );
+  await expect(page.locator('#manifest')).toHaveValue(
+    'https://iiif.io/api/cookbook/recipe/0258-tagging-external-resource/manifest.json',
+  );
+  await expect(page).toHaveURL(/manifest=.*0258-tagging-external-resource/);
+  await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
+    timeout: 15_000,
+  });
+});

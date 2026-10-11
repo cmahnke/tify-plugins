@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Demo transcription for the tify-plugins image-overlays example: word
+  boxes in a 1000x745 surface space, scaled to the 4032x3024 canvas at
+  runtime. Served from public/demo/tei/ so the live demo can load it. -->
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt><title>TEI word-box demo</title></titleStmt>
+      <publicationStmt><p>Demo data for the tify-plugins image-overlays example.</p></publicationStmt>
+      <sourceDesc><p>Born-digital demo data.</p></sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface xml:id="s1" lrx="1000" lry="745">
+      <graphic url="https://iiif.io/api/image/3.0/example/reference/918ecd18c2592080851777620de9bcb5-gottingen/full/max/0/default.jpg"/>
+      <zone xml:id="z1" ulx="66" uly="164" lrx="190" lry="210"/>
+      <zone xml:id="z2" ulx="200" uly="164" lrx="380" lry="210"/>
+      <zone xml:id="z3" ulx="66" uly="220" lrx="300" lry="266"/>
+      <zone xml:id="z4" ulx="310" uly="220" lrx="470" lry="266"/>
+      <zone xml:id="z5" points="500,220 640,220 640,266 500,266"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <p>
+        <w facs="#z1">Gänseliesel</w>
+        <w facs="#z2">Brunnen</w>
+        <w>unlinked</w>
+      </p>
+      <p>
+        <w facs="#z3">Göttingen</w>
+        <w facs="#z4">Marktplatz</w>
+        <w facs="#z5">Rathaus</w>
+      </p>
+    </body>
+  </text>
+</TEI>

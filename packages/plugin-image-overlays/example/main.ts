@@ -1,7 +1,7 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
 import Tify from 'tify';
-import { COOKBOOK_MANIFEST, TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
+import { TIFY_TRANSLATIONS_URL } from '@projektemacher/tify-plugin-core';
 import { applyStaticTranslations, createTranslator } from '@projektemacher/tify-plugin-core';
 import { imageOverlaysPlugin } from '@projektemacher/tify-plugin-image-overlays';
 import type { TifyPlugin } from '@projektemacher/tify-plugin-core';
@@ -16,7 +16,14 @@ applyStaticTranslations(t, lang);
 
 const params = new URLSearchParams(window.location.search);
 const input = document.querySelector('#manifest') as HTMLInputElement;
-input.value = params.get('manifest') ?? COOKBOOK_MANIFEST;
+// Live TEI demo (public/demo/tei/): word boxes over cookbook tiles, so the
+// example opens in TEI mode. import.meta.env.BASE_URL keeps this working
+// under the GitHub Pages sub-path as well as localhost.
+const demoUrl = new URL(
+  `${import.meta.env.BASE_URL}demo/tei/manifest.json`,
+  window.location.origin,
+).toString();
+input.value = params.get('manifest') ?? demoUrl;
 
 let tify: Tify | null = null;
 let plugin: TifyPlugin | null = null;

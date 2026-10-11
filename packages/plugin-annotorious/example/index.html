@@ -13,6 +13,31 @@
         Read-only annotations imported from the IIIF manifest.
       </p>
       <header class="controls">
+        <select
+          id="manifest-preset"
+          data-i18n-aria="Example manifest"
+          aria-label="Example manifest"
+        >
+          <option value="" data-i18n="Custom URL…">Custom URL…</option>
+          <option
+            value="https://iiif.io/api/cookbook/recipe/0021-tagging/manifest.json"
+            data-i18n="Simple tagging (Göttingen)"
+          >
+            Simple tagging (Göttingen)
+          </option>
+          <option
+            value="https://iiif.io/api/cookbook/recipe/0258-tagging-external-resource/manifest.json"
+            data-i18n="Tag with external resource (Göttingen)"
+          >
+            Tag with external resource (Göttingen)
+          </option>
+          <option
+            value="https://iiif.io/api/cookbook/recipe/0346-multilingual-annotation-body/manifest.json"
+            data-i18n="Multilingual comment (Japanese screen)"
+          >
+            Multilingual comment (Japanese screen)
+          </option>
+        </select>
         <input
           id="manifest"
           type="url"

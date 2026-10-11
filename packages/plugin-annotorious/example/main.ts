@@ -18,7 +18,13 @@ const de = (
 const { lang, t } = await createTranslator(undefined, { de });
 applyStaticTranslations(t, lang);
 const input = document.querySelector('#manifest') as HTMLInputElement;
-input.value = params.get('manifest') ?? DEFAULT_ANNOTATED_MANIFEST;
+const presetSelect = document.querySelector('#manifest-preset') as HTMLSelectElement;
+const presetUrls = Array.from(presetSelect.options)
+  .map((option) => option.value)
+  .filter((value) => value !== '');
+const initial = params.get('manifest') ?? DEFAULT_ANNOTATED_MANIFEST;
+input.value = initial;
+presetSelect.value = presetUrls.includes(initial) ? initial : '';
 
 let tify: Tify | null = null;
 let plugin: AnnotoriousPlugin | null = null;
@@ -44,13 +50,29 @@ async function load(manifestUrl: string): Promise<void> {
   }
 }
 
-document.querySelector('#load')?.addEventListener('click', () => {
-  const url = input.value.trim();
-  if (!url) return;
+function applyUrl(url: string): void {
   const next = new URL(window.location.href);
   next.searchParams.set('manifest', url);
   window.history.replaceState({}, '', next);
   void load(url);
+}
+
+document.querySelector('#load')?.addEventListener('click', () => {
+  const url = input.value.trim();
+  if (!url) return;
+  presetSelect.value = presetUrls.includes(url) ? url : '';
+  applyUrl(url);
+});
+
+presetSelect.addEventListener('change', () => {
+  if (!presetSelect.value) return;
+  input.value = presetSelect.value;
+  applyUrl(presetSelect.value);
+});
+
+input.addEventListener('input', () => {
+  const url = input.value.trim();
+  presetSelect.value = presetUrls.includes(url) ? url : '';
 });
 
 void load(input.value);

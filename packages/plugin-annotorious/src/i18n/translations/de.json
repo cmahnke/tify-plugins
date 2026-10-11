@@ -8,13 +8,18 @@
   "Annotations panel": "Annotationsbereich",
   "Code example": "Codebeispiel",
   "Could not load annotations": "Annotationen konnten nicht geladen werden",
+  "Custom URL…": "Eigene URL …",
   "Documentation": "Dokumentation",
+  "Example manifest": "Beispiel-Manifest",
   "IIIF manifest URL": "IIIF-Manifest-URL",
   "Load": "Laden",
   "Loading annotations…": "Annotationen werden geladen …",
+  "Multilingual comment (Japanese screen)": "Mehrsprachiger Kommentar (japanischer Paravent)",
   "No annotations on this page": "Keine Annotationen auf dieser Seite",
   "Read-only annotations imported from the IIIF manifest.": "Schreibgeschützte Annotationen aus dem IIIF-Manifest.",
   "Shapes not rendered (WebGL unavailable)": "Formen werden nicht gerendert (WebGL nicht verfügbar)",
   "Showing annotations for the first page only": "Nur Annotationen der ersten Seite werden angezeigt",
+  "Simple tagging (Göttingen)": "Einfaches Tagging (Göttingen)",
+  "Tag with external resource (Göttingen)": "Tag mit externer Ressource (Göttingen)",
   "Viewer not ready": "Viewer nicht bereit"
 }

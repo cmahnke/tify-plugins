@@ -132,6 +132,11 @@ body {
   padding: 0.4rem 0.8rem;
 }
 
+.example header.controls select {
+  padding: 0.4rem 0.6rem;
+  max-width: 100%;
+}
+
 .tify-plugin-note {
   font-size: 0.85rem;
   opacity: 0.9;

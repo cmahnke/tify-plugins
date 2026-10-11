@@ -13,6 +13,7 @@
   "Next →": "Weiter →",
   "Side panel": "Seitenleiste",
   "Side panel — tify-plugins": "Seitenleiste — tify-plugins",
+  "sidePanelPlugin renders the panel into the aside below: document title and canvas count from the manifest, live page status from the viewer, and Previous/Next/Thumbnails controls. Its toggle button docks into the viewer header.": "sidePanelPlugin rendert das Panel in das Aside-Element unten: Dokumenttitel und Canvas-Zahl aus dem Manifest, Live-Seitenstatus aus dem Viewer sowie Vor/Zurück/Übersicht-Steuerung. Sein Umschalt-Button dockt in die Viewer-Kopfzeile.",
   "Thumbnails": "Miniaturansichten",
   "Viewing page {pages}": "Seite {pages} wird angezeigt",
   "Viewing pages {pages}": "Seiten {pages} werden angezeigt"

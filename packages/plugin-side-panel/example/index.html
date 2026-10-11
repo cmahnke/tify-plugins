@@ -9,6 +9,13 @@
     <main class="example">
       <p><a href="../../../" data-i18n="← all examples">← all examples</a></p>
       <h1 data-i18n="Side panel">Side panel</h1>
+      <p
+        data-i18n="sidePanelPlugin renders the panel into the aside below: document title and canvas count from the manifest, live page status from the viewer, and Previous/Next/Thumbnails controls. Its toggle button docks into the viewer header."
+      >
+        sidePanelPlugin renders the panel into the aside below: document title and canvas count from
+        the manifest, live page status from the viewer, and Previous/Next/Thumbnails controls. Its
+        toggle button docks into the viewer header.
+      </p>
       <header class="controls">
         <input
           id="manifest"
@@ -28,9 +35,15 @@
 import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
 
 const tify = new Tify({ container: '#tify', manifestUrl });
+// Panel host in your markup; the plugin fills it and docks
+// a toggle button into the viewer header.
 const plugin = await sidePanelPlugin(tify, {
   panelEl: document.querySelector('#panel'),
-});</code></pre>
+  dock: 'auto',
+  autoOpen: true,
+});
+// Panel contents: manifest title + canvas count,
+// live page status, Previous/Next/Thumbnails controls.</code></pre>
         <p class="code-links">
           <a href="../../../docs/plugin-side-panel.html" data-i18n="Documentation">Documentation</a>
         </p>

@@ -30,8 +30,11 @@ const plugin = await imageOverlaysPlugin(tify, {
 
 `example/` — TEI word boxes or demo markers, synced to pages. Run `npm run
 dev` at the repo root and open `/packages/plugin-image-overlays/example/`;
-try it with the local TEI fixture manifest
-`http://localhost:5173/packages/plugin-image-overlays/example/tei-fixture/manifest.json`.
+it opens with the live TEI demo (`public/demo/tei/manifest.json` +
+`tei.xml`: word boxes over cookbook tiles, also served from the built app).
+The dev-only local fixture
+`http://localhost:5173/packages/plugin-image-overlays/example/tei-fixture/manifest.json`
+shows the same wiring.
 
 ## Manifest generation
 

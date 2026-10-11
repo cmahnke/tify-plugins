@@ -17,6 +17,10 @@ test('docks a Document panel and reports the page status', async ({ page }) => {
   await expect(page.locator('#panel')).toBeVisible();
   await expect(page.locator('.tify-plugin-status')).toHaveText('Viewing page 1');
   await expect(page.locator('#panel')).toContainText('Mock Book');
+  // The example documents how the panel contents are constructed.
+  await expect(page.locator('main.example > h1 + p')).toContainText(
+    'sidePanelPlugin renders the panel',
+  );
 });
 
 test('docks its button into the view group and shows a code example', async ({ page }) => {
@@ -109,6 +113,9 @@ test('german example chrome and plugin strings (?lang=de)', async ({ page }) => 
     `${EXAMPLE}?lang=de&manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`,
   );
   await expect(page.locator('main.example > h1')).toHaveText('Seitenleiste');
+  await expect(page.locator('main.example > h1 + p')).toContainText(
+    'sidePanelPlugin rendert das Panel',
+  );
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toContainText('Dokument');
   await expect(page.locator('.tify-plugin-status')).toHaveText('Seite 1 wird angezeigt');

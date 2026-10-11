@@ -20,3 +20,14 @@ test('falls back to demo markers that advance the page on click', async ({ page 
   await markers.first().click();
   await expect(markers.first()).toHaveText('P2·1');
 });
+
+test('opens with the live TEI demo by default', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
+  // No ?manifest=: the bundled demo manifest + TEI load for real
+  // (same-origin static files, served in dev and preview).
+  await page.goto(EXAMPLE);
+  await expect(page.locator('#manifest')).toHaveValue(/demo\/tei\/manifest\.json$/);
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect(words).toHaveCount(5);
+  await expect(words.first()).toHaveAttribute('title', 'Gänseliesel');
+});
