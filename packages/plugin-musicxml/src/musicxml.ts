@@ -22,7 +22,7 @@ import {
   type SidePanel,
   type TifyPlugin,
 } from '@projektemacher/tify-plugin-core';
-import { createTranslator } from '@projektemacher/tify-plugin-core';
+import { createTranslator, registerPlugin } from '@projektemacher/tify-plugin-core';
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
 import { MusicPlayer, type Instrument, type TrackConfig } from './audio';
 import { noteCoordOnStaff, type StaffEntry } from './note-map';
@@ -344,6 +344,8 @@ export async function musicxmlPlugin(
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
+  // Silence core's missing-plugin warning for the features this plugin owns.
+  const unregister = registerPlugin('musicxml');
   const panel: SidePanel = createSidePanel(options.panelEl, t('Score'));
   const showScoreOverlay = options.showScoreOverlay ?? true;
   const showHighlights = options.showHighlights ?? true;
@@ -855,6 +857,7 @@ export async function musicxmlPlugin(
     refresh,
     destroy() {
       disposed = true;
+      unregister();
       drawToken += 1;
       unsubscribe?.();
       dock?.destroy();

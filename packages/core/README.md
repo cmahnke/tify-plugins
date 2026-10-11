@@ -25,6 +25,9 @@ import '@projektemacher/tify-plugin-core/style.css';
   `describeImageFeatures`: which plugin-relevant features the manifest and
   image service advertise (IIIF versions, TEI/annotation/score links, HDR/C2PA
   signals). Presence-only, no linked resources are fetched.
+- **Missing-plugin warnings** — `registerPlugin` / `setFeatureWarnings`: the
+  load path (`getManifest`, `getInfoJson`) warns when a detected feature has
+  no loaded plugin; see below.
 - **Info panel** — `infoPanelPlugin`: lists those features for the current
   page, docked or beside the viewer. Needs no sibling plugin package.
 - **Dock** — `dockPanel()` with `DOCK_ICONS`; see below.
@@ -90,6 +93,33 @@ with core alone. The pure detectors are also exported for reuse
 (`describeManifest`, `describeCanvas`, `describeImageFeatures`).
 Presentation 2, 3, and the Presentation 4 2D subset are all covered
 (Image API has no v4; 3D Scenes are out of scope).
+
+## Missing-plugin warnings
+
+A manifest that advertises a feature is useless without the plugin that
+renders it. Core's load path (`getManifest`, `getInfoJson` — used by every
+plugin and available to hosts) therefore checks each loaded manifest and
+image service against the plugins that have registered themselves and warns
+once per feature and source:
+
+```
+[tify-plugins] https://example.org/manifest.json advertises TEI
+transcription (page 1), but @projektemacher/tify-plugin-image-overlays is
+not loaded
+```
+
+Each plugin package self-registers on init, so loading it silences its own
+warning; `activePlugins()` lists what is currently active. Hosts that
+deliberately ship without a plugin can silence everything:
+
+```ts
+import { setFeatureWarnings } from '@projektemacher/tify-plugin-core';
+
+setFeatureWarnings(false);
+```
+
+Detection is version-agnostic (Presentation 2/3/4-2D), and the checks never
+throw — a diagnostic must not break a manifest load.
 
 ## Examples using core
 

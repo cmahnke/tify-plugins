@@ -17,7 +17,7 @@
   "Info": "Info",
   "Info — tify-plugins": "Info — tify-plugins",
   "Info panel": "Info-Bereich",
-  "Lists the plugin-relevant features the manifest and image service advertise: IIIF versions, linked transcriptions, annotations, scores, and HDR/C2PA signals.": "Listet die plugin-relevanten Features auf, die Manifest und Bilddienst anbieten: IIIF-Versionen, verknüpfte Transkriptionen, Annotationen, Partituren sowie HDR/C2PA-Signale.",
+  "Lists the plugin-relevant features the manifest and image service advertise: IIIF versions, linked transcriptions, annotations, scores, and HDR/C2PA signals. Features without their plugin also warn in the console (?warnings=0 silences).": "Listet die plugin-relevanten Features auf, die Manifest und Bilddienst anbieten: IIIF-Versionen, verknüpfte Transkriptionen, Annotationen, Partituren sowie HDR/C2PA-Signale. Features ohne passendes Plugin werden außerdem in der Konsole gemeldet (?warnings=0 schaltet das ab).",
   "Load": "Laden",
   "Loading…": "Wird geladen …",
   "Manifest": "Manifest",

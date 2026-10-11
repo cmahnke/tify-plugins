@@ -13,7 +13,11 @@ import {
   type HdrSupport,
   type ImageServiceDescription,
 } from './hdr-lib';
-import { createTranslator, type TranslateFn } from '@projektemacher/tify-plugin-core';
+import {
+  createTranslator,
+  registerPlugin,
+  type TranslateFn,
+} from '@projektemacher/tify-plugin-core';
 import {
   createSidePanel,
   onPagesChange,
@@ -128,6 +132,8 @@ export async function hdrPlugin(tify: Tify, options: HdrOptions): Promise<HdrPlu
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
+  // Silence core's missing-plugin warning for the features this plugin owns.
+  const unregister = registerPlugin('hdr');
   const panel: SidePanel = createSidePanel(options.panelEl, t('HDR'));
   const serviceBody = document.createElement('div');
   serviceBody.className = 'tify-plugin-service';
@@ -214,6 +220,7 @@ export async function hdrPlugin(tify: Tify, options: HdrOptions): Promise<HdrPlu
     getServiceDescription,
     destroy() {
       disposed = true;
+      unregister();
       unsubscribe?.();
       dock?.destroy();
       options.panelEl.classList.remove('tify-plugin-panel');

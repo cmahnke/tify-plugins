@@ -28,7 +28,11 @@ import {
   getXywhAnnotations,
   summarizeBodies,
 } from '@projektemacher/tify-plugin-core';
-import { createTranslator, type TranslateFn } from '@projektemacher/tify-plugin-core';
+import {
+  createTranslator,
+  registerPlugin,
+  type TranslateFn,
+} from '@projektemacher/tify-plugin-core';
 import {
   createSidePanel,
   onPagesChange,
@@ -128,6 +132,8 @@ export async function annotoriousPlugin(
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
+  // Silence core's missing-plugin warning for the features this plugin owns.
+  const unregister = registerPlugin('annotorious');
   const panel: SidePanel | null = options.panelEl
     ? createSidePanel(options.panelEl, t('Annotations'))
     : null;
@@ -249,6 +255,7 @@ export async function annotoriousPlugin(
     hasShapes: () => anno !== null,
     destroy() {
       disposed = true;
+      unregister();
       unsubscribe();
       dock?.destroy();
       try {

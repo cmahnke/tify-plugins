@@ -5,3 +5,4 @@ export * from './lib/iiif';
 export * from './lib/dock';
 export * from './lib/features';
 export * from './lib/info-panel';
+export * from './lib/feature-warnings';

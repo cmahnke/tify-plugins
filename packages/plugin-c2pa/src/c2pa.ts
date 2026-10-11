@@ -13,7 +13,11 @@ import {
   trustInfo,
   type TileC2paStatus,
 } from './c2pa-lib';
-import { createTranslator, type TranslateFn } from '@projektemacher/tify-plugin-core';
+import {
+  createTranslator,
+  registerPlugin,
+  type TranslateFn,
+} from '@projektemacher/tify-plugin-core';
 import {
   createSidePanel,
   getInfoJsonForCurrentPage,
@@ -201,6 +205,8 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
+  // Silence core's missing-plugin warning for the features this plugin owns.
+  const unregister = registerPlugin('c2pa');
   const maxTiles = options.maxTiles ?? 8;
   const trust = resolveTrustAnchors(options.trustAnchors);
   const panel: SidePanel = createSidePanel(options.panelEl, t('Provenance'));
@@ -440,6 +446,7 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
     refresh,
     destroy() {
       disposed = true;
+      unregister();
       runId += 1;
       aborter?.abort();
       unsubscribe?.();

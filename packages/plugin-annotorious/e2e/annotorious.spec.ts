@@ -240,3 +240,84 @@ test('imports v2 otherContent annotations into the panel', async ({ page }) => {
   await expect(page.locator('#panel tbody tr')).toHaveCount(1);
   await expect(page.locator('#panel tbody tr').first()).toContainText('Note 1');
 });
+
+test('a loaded plugin silences its own missing-plugin warning', async ({ page }) => {
+  // Registered after beforeEach: the later route wins for the manifest URL.
+  const warnings: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'warning') warnings.push(message.text());
+  });
+  await page.route(`${MOCK_BASE}/manifest.json`, (route) =>
+    route.fulfill({ json: featureManifest() }),
+  );
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  // The plugin runs, so core must not warn about a missing annotorious —
+  // but the unhandled TEI/score features of that manifest still warn.
+  await expect
+    .poll(() => warnings.filter((l) => l.includes('tify-plugin-annotorious')).length)
+    .toBe(0);
+  await expect
+    .poll(() => warnings.filter((l) => l.includes('tify-plugin-image-overlays')).length)
+    .toBe(1);
+});
+
+/** Manifest with annotations plus TEI and score links other plugins own. */
+function featureManifest(): object {
+  const manifest = {
+    '@context': 'http://iiif.io/api/presentation/3/context.json',
+    id: `${MOCK_BASE}/manifest.json`,
+    type: 'Manifest',
+    label: { en: ['Mock Book'] },
+    items: [
+      {
+        id: `${MOCK_BASE}/canvas/p1`,
+        type: 'Canvas',
+        label: { en: ['Page 1'] },
+        width: 750,
+        height: 1000,
+        items: [
+          {
+            id: `${MOCK_BASE}/page/p1/1`,
+            type: 'AnnotationPage',
+            items: [
+              {
+                id: `${MOCK_BASE}/annotation/p1-image`,
+                type: 'Annotation',
+                motivation: 'painting',
+                body: {
+                  id: `${MOCK_BASE}/image/full/750,1000/0/default.jpg`,
+                  type: 'Image',
+                  format: 'image/jpeg',
+                  width: 750,
+                  height: 1000,
+                  service: [{ id: `${MOCK_BASE}/image`, type: 'ImageService3', profile: 'level2' }],
+                },
+                target: `${MOCK_BASE}/canvas/p1`,
+              },
+            ],
+          },
+        ],
+        annotations: [
+          {
+            id: `${MOCK_BASE}/annotations/p1`,
+            type: 'AnnotationPage',
+            items: [
+              {
+                id: `${MOCK_BASE}/annotation/anno-1`,
+                type: 'Annotation',
+                motivation: 'tagging',
+                body: { type: 'TextualBody', value: 'Note 1', format: 'text/plain' },
+                target: `${MOCK_BASE}/canvas/p1#xywh=50,100,200,150`,
+              },
+            ],
+          },
+        ],
+        seeAlso: [{ id: `${MOCK_BASE}/tei.xml`, type: 'Text', format: 'application/tei+xml' }],
+        rendering: [
+          { id: `${MOCK_BASE}/score.musicxml`, format: 'application/vnd.recordare.musicxml+xml' },
+        ],
+      },
+    ],
+  };
+  return manifest;
+}

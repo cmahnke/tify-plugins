@@ -22,7 +22,7 @@ import {
   waitReady,
 } from '@projektemacher/tify-plugin-core';
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
-import { createTranslator } from '@projektemacher/tify-plugin-core';
+import { createTranslator, registerPlugin } from '@projektemacher/tify-plugin-core';
 import type { SidePanel, TifyPlugin } from '@projektemacher/tify-plugin-core';
 import { fetchTeiPageCached, type TeiOptions, type TeiWordBox } from './tei';
 
@@ -95,6 +95,8 @@ export async function imageOverlaysPlugin(
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
+  // Silence core's missing-plugin warning for the features this plugin owns.
+  const unregister = registerPlugin('image-overlays');
   const count = options.markers ?? 3;
   const teiOpts = options.tei === false ? null : (options.tei ?? {});
   const panel: SidePanel | null = options.panelEl
@@ -404,6 +406,7 @@ export async function imageOverlaysPlugin(
   return {
     destroy() {
       disposed = true;
+      unregister();
       unsubscribe?.();
       try {
         tify.viewer?.removeHandler?.('open', onOpen);

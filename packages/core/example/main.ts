@@ -9,6 +9,7 @@ import {
   TIFY_TRANSLATIONS_URL,
   applyStaticTranslations,
   createTranslator,
+  setFeatureWarnings,
 } from '@projektemacher/tify-plugin-core';
 import { infoPanelPlugin } from '@projektemacher/tify-plugin-core';
 import type { TifyPlugin } from '@projektemacher/tify-plugin-core';
@@ -27,6 +28,10 @@ const { lang, t } = await createTranslator(undefined, { de });
 applyStaticTranslations(t, lang);
 
 const params = new URLSearchParams(window.location.search);
+// The panel example loads no feature plugins, so the console warns about
+// every manifest feature. ?warnings=0 silences that (hosts can call
+// setFeatureWarnings(false) themselves).
+if (params.get('warnings') === '0') setFeatureWarnings(false);
 const input = document.querySelector('#manifest') as HTMLInputElement;
 input.value = params.get('manifest') ?? COOKBOOK_MANIFEST;
 

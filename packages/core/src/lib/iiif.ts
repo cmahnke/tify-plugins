@@ -2,6 +2,7 @@
 // retrieval. Presentation 2 (`sequences`/`@id`) and 3 (`items`/`id`) are both
 // accepted wherever cheap to do so.
 import { fetchJson, getPages } from './tify-plugin';
+import { checkImageFeatures, checkManifestFeatures } from './feature-warnings';
 import type Tify from 'tify';
 
 export interface CanvasRef {
@@ -38,6 +39,9 @@ export async function getManifest(tify: Tify): Promise<any> {
   if (cached) return cached;
   const manifest = await fetchJson(url);
   manifestCache.set(url, manifest);
+  // Feature diagnostics on the load path: warns when the manifest advertises
+  // something no loaded plugin handles (never throws).
+  checkManifestFeatures(url, manifest);
   return manifest;
 }
 
@@ -69,6 +73,8 @@ export async function getInfoJson(serviceId: string): Promise<any> {
   const base = serviceId.endsWith('/') ? serviceId : `${serviceId}/`;
   const info = await fetchJson(`${base}info.json`);
   infoCache.set(serviceId, info);
+  // Service-level feature diagnostics (HDR/C2PA advertisement), same guard.
+  checkImageFeatures(serviceId, info);
   return info;
 }
 
