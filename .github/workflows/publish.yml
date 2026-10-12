@@ -63,6 +63,12 @@ jobs:
     needs: [ci, guard]
     if: needs.guard.outputs.any == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # One at a time: the guard emits core first, so it lands on npmjs
+      # before the plugins that depend on it.
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.guard.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -71,16 +77,34 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
-      # Sequential on purpose: core must be on npmjs before the plugins that
-      # depend on it. The matrix keeps core first (see the guard script).
-      - name: Publish changed packages to npmjs
+      # dist/ is gitignored, so the packages must be built here.
+      - name: Build
+        run: npm run build:packages
+      # Registry check: skips versions that are already live (e.g. a tag
+      # republished, or the version guard and registry disagreeing).
+      - id: check_npm
+        name: Check npmjs for this version
+        working-directory: packages/${{ matrix.dir }}
         run: |
-          for dir in ${{ needs.guard.outputs.dirs }}; do
-            echo "publishing packages/$dir"
-            npm publish --workspace "packages/$dir"
-          done
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          OUT=$(npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org 2>&1) || true
+          if [ "$OUT" = "$VERSION" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif echo "$OUT" | grep -q "E404"; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::npm view failed unexpectedly: $OUT"
+            exit 1
+          fi
+      - name: Publish ${{ matrix.name }} to npmjs
+        if: steps.check_npm.outputs.exists != 'true'
+        run: npm publish --workspace "packages/${{ matrix.dir }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Skip notice (already on npmjs)
+        if: steps.check_npm.outputs.exists == 'true'
+        run: echo "${{ matrix.name }} already on npmjs, skipping publish"
 
   publish-gpr:
     needs: [ci, guard]
