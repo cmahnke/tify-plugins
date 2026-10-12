@@ -34,7 +34,7 @@ jobs:
       - run: npm run test:i18n --workspace @projektemacher/tify-plugin-${{ matrix.package }}
 
   app:
-    name: demo app (lint, typecheck, i18n, tei, build, docs)
+    name: demo app (lint, typecheck, i18n, citation, tei, build, docs)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -46,6 +46,9 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:i18n
+      # Citation metadata must match the workspace versions; the publish
+      # guard re-checks this before any release.
+      - run: node scripts/ci-publish-guard.mjs --metadata
       # The headless checks below run real plugin sources under plain Node
       # (no vite aliases), so the workspace packages must be built first:
       # core's dist/ resolves the `@projektemacher/tify-plugin-core` import.

@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: 'If you use this software, please cite it as below.'
+title: 'tify-plugins — example plugins for the TIFY IIIF viewer'
+abstract: >-
+  Plugins for TIFY (tify@0.36.2), the slim IIIF document viewer, published
+  as individual npm modules under @projektemacher/tify-plugin-*: a custom
+  metadata side panel, OpenSeadragon overlays synced to pages (TEI word
+  boxes or demo markers), HDR canvas status, per-tile C2PA provenance,
+  display-only Annotorious annotations, and rendered MusicXML scores with
+  playback. All panels dock into the TIFY viewer chrome.
+authors:
+  - family-names: Mahnke
+    given-names: Christian
+    alias: cmahnke
+    email: mail@christianmahnke.de
+    orcid: 'https://orcid.org/0009-0003-1361-4159'
+type: software
+version: 0.1.0
+date-released: '2026-10-13'
+license: AGPL-3.0-or-later
+repository-code: 'https://github.com/cmahnke/tify-plugins'
+url: 'https://github.com/cmahnke/tify-plugins'
+keywords:
+  - IIIF
+  - TIFY
+  - OpenSeadragon
+  - IIIF Presentation
+  - IIIF Image
+  - viewer
+  - plugins
+references:
+  - type: software
+    title: TIFY
+    authors:
+      - name: 'TIFY contributors'
+    url: 'https://github.com/tify-iiif-viewer/tify'
+    repository-code: 'https://github.com/tify-iiif-viewer/tify'
+    notes: 'The slim IIIF document viewer these plugins wrap.'

@@ -15,6 +15,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:i18n": "node scripts/check-i18n.js . && npm run test:i18n --workspaces --if-present",
+    "test:citation": "node scripts/ci-publish-guard.mjs --metadata",
     "test:e2e": "playwright test",
     "docs": "node scripts/build-docs.mjs dist/docs",
     "build:pages": "npm run build && npm run docs",

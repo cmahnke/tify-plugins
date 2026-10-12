@@ -9,8 +9,12 @@
 // bumped packages, and re-running after a release publishes nothing.
 //
 // Usage: node scripts/ci-publish-guard.mjs [previousTag] [--out <file>]
-// Writes GITHUB_OUTPUT-style assignments (matrix/any/dirs) to --out, or to
-// $GITHUB_OUTPUT when set, else stdout.
+//        node scripts/ci-publish-guard.mjs --metadata
+// The default mode writes GITHUB_OUTPUT-style assignments (matrix/any/dirs)
+// to --out, or to $GITHUB_OUTPUT when set, else stdout, and also checks the
+// citation metadata. --metadata runs only that check (for the CI app job,
+// without needing git tags): it fails when the version in CITATION.cff or
+// codemeta.json no longer matches the workspace packages.
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -18,6 +22,7 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 
 const args = process.argv.slice(2);
+const metadataOnly = args.includes('--metadata');
 const previousTag = args.find((arg) => !arg.startsWith('--')) ?? '';
 const outFlag = args.indexOf('--out');
 
@@ -61,6 +66,50 @@ for (const dir of workspaceDirs()) {
   packages.push({ dir, name: pkg.name, version: pkg.version });
 }
 
+/** Version cited by CITATION.cff (top-level YAML key, no YAML parser). */
+function citationVersion() {
+  const text = readFileSync(path.join(root, 'CITATION.cff'), 'utf8');
+  const match = /^version:\s*(.+)$/m.exec(text);
+  return match ? match[1].trim() : null;
+}
+
+/** Version cited by codemeta.json. */
+function codemetaVersion() {
+  return JSON.parse(readFileSync(path.join(root, 'codemeta.json'), 'utf8')).version ?? null;
+}
+
+/**
+ * Citation metadata must travel with the release: the version cited in
+ * CITATION.cff and codemeta.json has to match the workspace packages (they
+ * share one version). Exits 1 with an actionable message on a mismatch.
+ */
+function checkMetadata() {
+  const versions = [...new Set(packages.map((pkg) => pkg.version))];
+  if (versions.length > 1) {
+    console.error(
+      `[publish-guard] workspaces disagree on the version: ${versions.join(', ')} — release expects one shared version`,
+    );
+    process.exit(1);
+  }
+  const version = versions[0];
+  const cited = { 'CITATION.cff': citationVersion(), 'codemeta.json': codemetaVersion() };
+  const stale = Object.entries(cited).filter(([, value]) => value !== version);
+  if (stale.length > 0) {
+    for (const [file, value] of stale) {
+      console.error(
+        `[publish-guard] ${file} cites ${value ?? 'no version'}, but the packages are ${version} — bump it (version and date) before releasing`,
+      );
+    }
+    process.exit(1);
+  }
+  console.error(`[publish-guard] citation metadata matches ${version}`);
+}
+
+if (metadataOnly) {
+  checkMetadata();
+  process.exit(0);
+}
+
 // Core first: plugins depend on it, so the registry must already have it.
 packages.sort((a, b) => {
   if (a.name.endsWith('/tify-plugin-core')) return -1;
@@ -71,6 +120,10 @@ packages.sort((a, b) => {
 const changed = packages.filter((pkg) =>
   previousTag ? pkg.version !== versionAt(previousTag, `${pkg.dir}/package.json`) : true,
 );
+
+// Publishing requires current citation metadata (no-op for --metadata, which
+// exits above).
+if (changed.length > 0) checkMetadata();
 
 const lines = [`matrix=${JSON.stringify(changed.map(({ dir, name }) => ({ dir, name })))}`];
 lines.push(`any=${changed.length > 0 ? 'true' : 'false'}`);

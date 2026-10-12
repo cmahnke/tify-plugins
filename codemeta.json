@@ -1,0 +1,56 @@
+{
+  "@context": "https://w3id.org/codemeta/3.0",
+  "@type": "SoftwareSourceCode",
+  "name": "tify-plugins",
+  "description": "Plugins for TIFY (tify@0.36.2), the slim IIIF document viewer, published as individual npm modules under @projektemacher/tify-plugin-*: a custom metadata side panel, OpenSeadragon overlays synced to pages (TEI word boxes or demo markers), HDR canvas status, per-tile C2PA provenance, display-only Annotorious annotations, and rendered MusicXML scores with playback. All panels dock into the TIFY viewer chrome.",
+  "version": "0.1.0",
+  "dateCreated": "2026-06-02",
+  "dateModified": "2026-10-13",
+  "datePublished": "2026-10-13",
+  "license": "https://spdx.org/licenses/AGPL-3.0-or-later",
+  "author": {
+    "@type": "Person",
+    "familyName": "Mahnke",
+    "givenName": "Christian",
+    "email": "mail@christianmahnke.de",
+    "identifier": "https://orcid.org/0009-0003-1361-4159",
+    "url": "https://github.com/cmahnke"
+  },
+  "codeRepository": "https://github.com/cmahnke/tify-plugins",
+  "issueTracker": "https://github.com/cmahnke/tify-plugins/issues",
+  "readme": "https://github.com/cmahnke/tify-plugins#readme",
+  "programmingLanguage": ["TypeScript", "JavaScript", "Vue"],
+  "runtimePlatform": "Node.js >= 20.19",
+  "developmentStatus": "https://www.repostatus.org/#wip",
+  "keywords": [
+    "IIIF",
+    "TIFY",
+    "OpenSeadragon",
+    "IIIF Presentation",
+    "IIIF Image",
+    "viewer",
+    "plugins"
+  ],
+  "softwareRequirements": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "tify",
+      "runtimePlatform": "Node.js >= 20.19",
+      "applicationCategory": "IIIF viewer"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "openseadragon",
+      "applicationCategory": "zoomable image viewer"
+    }
+  ],
+  "hasPart": [
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-core" },
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-side-panel" },
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-image-overlays" },
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-annotorious" },
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-musicxml" },
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-hdr" },
+    { "@type": "SoftwareApplication", "name": "@projektemacher/tify-plugin-c2pa" }
+  ]
+}

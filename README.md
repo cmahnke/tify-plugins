@@ -133,6 +133,22 @@ Every workspace's `npm run test:i18n` scans its own static `t('…')` /
 `data-i18n` keys and fails on missing, unused, empty, or mis-sorted catalogue
 entries (`scripts/check-i18n.js <dir>`).
 
+## Citing
+
+This project is citable via [Citation File Format](https://citation-file-format.github.io/)
+(`CITATION.cff`, which GitHub renders in the sidebar) and
+[Codemeta](https://codemeta.org/) (`codemeta.json`, JSON-LD for software
+metadata exchange). Both name the author, license (AGPL-3.0-or-later), the
+repository, and TIFY as the wrapped viewer.
+
+Version bumps must update both files' `version` (and `date-released` /
+`dateModified`) — the publish guard (`npm run test:citation`) fails otherwise,
+in CI and before any release.
+
+```sh
+node scripts/ci-publish-guard.mjs --metadata
+```
+
 ## License
 
 AGPL-3.0-or-later, see `LICENSE` (matches TIFY's license; each package carries a copy).
