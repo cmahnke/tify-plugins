@@ -106,6 +106,10 @@ import '@projektemacher/tify-plugin-core/style.css';
 
 The same packages are also published to GitHub Packages under the
 `@cmahnke` scope (`@cmahnke/tify-plugin-*`, mirroring the npmjs releases).
+Releases run the `Publish` workflow ([`publish.yml`](.github/workflows/publish.yml):
+publishing a GitHub Release, or manually from the Actions tab), which gates
+on the full CI run and publishes only the packages whose version changed
+since the previous release tag — so re-running is a no-op.
 Installing from there needs authentication — add to `.npmrc`:
 
 ```

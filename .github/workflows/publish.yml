@@ -1,7 +1,15 @@
 # Publishes every workspace package to npm AND to GitHub Packages — but only
 # after the full CI run (lint, typecheck, i18n/TEI checks, e2e browser matrix)
-# passes. Manual release: bump the package versions first (all workspaces
-# share one version), then run this workflow.
+# passes. Two triggers, both guarded: only packages whose version changed
+# since the previous release tag are published, so re-running is a no-op.
+#
+# - Manual: `workflow_dispatch` from the Actions tab. Compares against the
+#   newest reachable tag.
+# - Release: publishing a GitHub Release runs the workflow for that tag;
+#   the guard compares against the tag before it.
+#
+# Bump versions first (all workspaces share one version) — see the release
+# process in README/PLANS; without a bump nothing is published.
 #
 # - npmjs keeps the @projektemacher scope (needs the NPM_TOKEN repo secret,
 #   an npm automation token with publish rights for @projektemacher).
@@ -13,16 +21,47 @@ name: Publish
 
 on:
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
 
 jobs:
+  # Which packages are unreleased? Version diff against the previous release
+  # tag (all of them when there is none). The guard lives in
+  # scripts/ci-publish-guard.mjs so it stays unit- and CI-testable.
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.diff.outputs.matrix }}
+      any: ${{ steps.diff.outputs.any }}
+      dirs: ${{ steps.diff.outputs.dirs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # tags carry the version history the diff needs
+      - id: base
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            # The tag this release just created: compare against its parent.
+            previous=$(git describe --tags --abbrev=0 "$RELEASE_TAG^" 2>/dev/null || true)
+          else
+            # Manual run: newest reachable tag (empty → first release).
+            previous=$(git describe --tags --abbrev=0 HEAD 2>/dev/null || true)
+          fi
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+      - id: diff
+        run: node scripts/ci-publish-guard.mjs "${{ steps.base.outputs.previous }}"
+
   ci:
     uses: ./.github/workflows/ci.yml
 
   publish:
-    needs: ci
+    needs: [ci, guard]
+    if: needs.guard.outputs.any == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,34 +71,27 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
-      - run: |
-          npm publish --workspace @projektemacher/tify-plugin-core
-          npm publish --workspace @projektemacher/tify-plugin-side-panel
-          npm publish --workspace @projektemacher/tify-plugin-image-overlays
-          npm publish --workspace @projektemacher/tify-plugin-hdr
-          npm publish --workspace @projektemacher/tify-plugin-c2pa
-          npm publish --workspace @projektemacher/tify-plugin-annotorious
-          npm publish --workspace @projektemacher/tify-plugin-musicxml
+      # Sequential on purpose: core must be on npmjs before the plugins that
+      # depend on it. The matrix keeps core first (see the guard script).
+      - name: Publish changed packages to npmjs
+        run: |
+          for dir in ${{ needs.guard.outputs.dirs }}; do
+            echo "publishing packages/$dir"
+            npm publish --workspace "packages/$dir"
+          done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-gpr:
-    needs: ci
+    needs: [ci, guard]
+    if: needs.guard.outputs.any == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
-      matrix:
-        dir:
-          - core
-          - plugin-side-panel
-          - plugin-image-overlays
-          - plugin-hdr
-          - plugin-c2pa
-          - plugin-annotorious
-          - plugin-musicxml
+      matrix: ${{ fromJSON(needs.guard.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -81,7 +113,7 @@ jobs:
             p.name = p.name.replace('@projektemacher/', '@cmahnke/');
             fs.writeFileSync(file, JSON.stringify(p, null, 2) + '\n');
           "
-      - name: Publish to GitHub Packages
+      - name: Publish ${{ matrix.name }} to GitHub Packages
         run: npm publish --access public
         working-directory: packages/${{ matrix.dir }}
         env:
