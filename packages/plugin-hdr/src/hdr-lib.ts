@@ -8,7 +8,7 @@ import {
   checkHDRCanvas,
   defaultGetContextHDR,
   resetGetContext,
-} from 'hdr-canvas';
+} from '@projektemacher/hdr-canvas';
 
 import { getInfoJsonForCurrentPage, serviceSupports } from '@projektemacher/tify-plugin-core';
 

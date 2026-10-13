@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@projektemacher/tify-plugin-core": "^0.1.0",
-    "hdr-canvas": "^0.2.0"
+    "@projektemacher/hdr-canvas": "^0.3.1"
   },
   "peerDependencies": {
     "tify": "0.36.2"
