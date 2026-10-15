@@ -334,7 +334,7 @@ function pieceFromGeometry(g: PieceGeometry, scalesOut: number[]): ScorePiece | 
   // The pad fraction is applied to source and target alike, so the staff
   // lines still map exactly onto the scan's staff lines.
   const padTopCap = Math.max(0, (lines.y0 - boundAbove) * 0.45);
-  const padBottomCap = Math.max(0, (lines.y1 - boundBelow) * 0.45);
+  const padBottomCap = Math.max(0, (boundBelow - lines.y1) * 0.45);
   const padTop = Math.max(0, Math.min(lines.y0 - ink.y0, padTopCap));
   const padBottom = Math.max(0, Math.min(ink.y1 - lines.y1, padBottomCap));
 

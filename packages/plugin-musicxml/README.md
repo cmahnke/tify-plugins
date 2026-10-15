@@ -19,35 +19,40 @@ const plugin = await musicxmlPlugin(tify, {
 ```
 
 Options: `panelEl` (required, sidecar unless docked), `dock?: boolean | 'auto'`
-(default `'auto'`), `musicxml?: string` (absolute URL or raw XML — overrides
-the manifest discovery below), `showScoreOverlay?` (default `true`),
-`showHighlights?` (default `true`).
+(default `'auto'`), `tei?: string` (absolute TEI URL or raw TEI XML — overrides
+the manifest discovery below), `musicxml?: string` (absolute URL or raw XML —
+wins over the TEI-embedded score), `showScoreOverlay?` (default `true`),
+`showHighlights?` (default `true`), `regionOverlay?: { enabled?, color?,
+opacity? }` (default on, `#ff6400`, 25% fill).
+
+The panel mirrors the
+[score-page viewer](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher)'s
+player: play/pause/stop, tempo, track and instrument selectors, a **Dual**
+toggle (on by default whenever the score carries two note streams), a **Score**
+toggle for the rendered overlay, and a **Regions** group (on/off, color,
+transparency) for the persistent staff-region overlay drawn from the TEI.
 
 ## Manifest format
 
-Per canvas, the MusicXML document is discovered via the canvas `rendering`
-entries (format `application/vnd.recordare.musicxml+xml`, or an id ending in
-`.musicxml`), resolved against the manifest URL. Staff geometry comes from
-describing annotations whose `#xywh` target is the staff region and whose body
-carries the staff grid as JSON (`staffGrid`, `staffLineCount`):
+Per canvas, the score data is discovered via the canvas `rendering` entry
+with format `application/tei+xml` (or an id ending in `.tei.xml`), resolved
+against the manifest URL. That one document (the homr pipeline's per-page
+TEI, see the [homr TEI customization](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher/Source%20Files/Experiments/homr/schema/homr-tei.odd))
+carries everything:
 
-```json
-{
-  "type": "Annotation",
-  "motivation": "describing",
-  "body": {
-    "type": "TextualBody",
-    "format": "application/json",
-    "value": "{\"staffGrid\": [{\"x\": 50, \"y\": [100, 112, 124, 136, 148]}], \"staffLineCount\": 5}"
-  },
-  "target": "https://example.org/canvas/p1#xywh=50,100,650,140"
-}
-```
+- the staff geometry — `<facsimile>/<surface>/<zone type="staff">` with the
+  bounding box (`@ulx/@uly/@lrx/@lry`) and one `<path points="x,y …">`
+  polyline per staff line (the staff grid);
+- the MusicXML embedded verbatim under `<div type="score">`;
+- the OMR run outcome on `<application ident="homr" status="…"
+confidence="…">`.
 
-Without staff data the score falls back to a whole-page letterbox layout.
-Without a MusicXML reference the panel reports that the page has no score;
-playback needs no image at all (an explicit `musicxml` URL or XML string
-suffices).
+Without a TEI rendering, the plain MusicXML rendering (format
+`application/vnd.recordare.musicxml+xml`, or an id ending in `.musicxml`) is
+used as a fallback: playback works, but nothing is mapped onto the scan (no
+aligned score, no staff regions). Without any score reference the panel
+reports that the page has no score; playback needs no image at all (an
+explicit `musicxml` URL or XML string suffices).
 
 ## Playback details
 
@@ -75,7 +80,7 @@ rest before rendering; the playback parser already ignores pitchless rests.
 
 ## Manifest generation
 
-Score data (MusicXML + staff grids) is produced by the
+Score data (staff TEI + MusicXML) is produced by the
 [homr OMR pipeline](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher)
 (optical music recognition with staff detection), not by an image tiler:
 image services themselves can be generated with
@@ -85,9 +90,9 @@ image services themselves can be generated with
 
 ## Example
 
-`example/` — manifest URL box with the score panel beside the viewer (plus an
-optional `?musicxml=` override to try the player without authoring a
-manifest). Run `npm run dev` at the repo root and open
+`example/` — manifest URL box with the score panel beside the viewer (plus
+optional `?tei=` / `?musicxml=` overrides to try the player without authoring
+a manifest). Run `npm run dev` at the repo root and open
 `/packages/plugin-musicxml/example/`.
 
 ## Development

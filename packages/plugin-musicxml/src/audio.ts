@@ -111,6 +111,14 @@ export class MusicPlayer {
   private pausedAt = 0;
   private baseTime = 0;
   private cb: PlaybackCallbacks = {};
+  /**
+   * Restart generation: a scheduled setTimeout callback may already sit in
+   * the task queue when stop()/play() reschedule (e.g. instrument or track
+   * switch under load) — clearing it is then too late. Callbacks capture
+   * the generation and stay silent unless it is still current, so stale
+   * audio and highlights can never leak into the restarted playback.
+   */
+  private epoch = 0;
 
   constructor(timeline: MusicTimeline) {
     this.timeline = timeline;
@@ -222,6 +230,8 @@ export class MusicPlayer {
     if (this.playing) return;
     const ctx = this.ensureContext();
     this.playing = true;
+    this.epoch++;
+    const epoch = this.epoch;
     // Small lead-in so a still-resuming context has its clock running before
     // the first grid time is reached.
     this.baseTime = ctx.currentTime + 0.05;
@@ -249,7 +259,7 @@ export class MusicPlayer {
         const durSec = Math.max(0.12, this.beatToSeconds(n.durationDiv / this.timeline.divisions));
         const index = this.timeline.notes.indexOf(n);
         const id = window.setTimeout(() => {
-          if (!this.playing) return;
+          if (!this.playing || epoch !== this.epoch) return;
           this.playTone(this.noteToFreq(n), atSec, durSec, track.instrument);
           this.cb.onNote?.(n, index);
         }, atSec * 1000);
@@ -260,6 +270,7 @@ export class MusicPlayer {
 
     const totalSec = this.beatToSeconds(absBeat) * 1000;
     const endId = window.setTimeout(() => {
+      if (epoch !== this.epoch) return;
       this.stop();
       this.cb.onEnd?.();
     }, totalSec + 200);
@@ -276,6 +287,7 @@ export class MusicPlayer {
   }
 
   stop(): void {
+    this.epoch++;
     this.playing = false;
     for (const id of this.timeouts) window.clearTimeout(id);
     this.timeouts = [];

@@ -5,27 +5,67 @@ import { fileURLToPath } from 'node:url';
 import { MOCK_BASE, buildInfo, mockIiif } from '../../../e2e/helpers';
 
 const EXAMPLE = '/packages/plugin-musicxml/example/';
+const TEI_URL = `${MOCK_BASE}/page1.tei.xml`;
 const SCORE_URL = `${MOCK_BASE}/score.musicxml`;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCORE_XML = readFileSync(path.join(here, '..', 'test-fixtures', 'page006.musicxml'), 'utf8');
+// The TEI embeds the MusicXML verbatim from the root element on (no XML
+// declaration — generate_tei.py strips it on embedding).
+const EMBEDDED_SCORE = SCORE_XML.replace(/^<\?xml[^>]*\?>\s*/, '');
 
-/** Synthetic staff grid: 5 lines with a slight slope across the staff bbox. */
-function staffGrid(
-  x0: number,
-  y0: number,
-  x1: number,
-  lines = 5,
-  points = 8,
-): Array<{ x: number; y: number[] }> {
-  const grid: Array<{ x: number; y: number[] }> = [];
-  for (let i = 0; i < points; i++) {
-    const x = x0 + ((x1 - x0) * i) / (points - 1);
-    const y: number[] = [];
-    for (let k = 0; k < lines; k++) y.push(y0 + k * 20 + 0.02 * (x - x0));
-    grid.push({ x, y });
+/**
+ * Synthetic homr page TEI: one staff zone over 750×1000 canvas pixels, five
+ * staff lines (20 px apart, slight slope), homr application header, and the
+ * fixture MusicXML embedded under <div type="score">.
+ */
+function pageTei(): string {
+  const x0 = 50;
+  const y0 = 100;
+  const x1 = 700;
+  const points = 8;
+  const paths = [];
+  for (let k = 0; k < 5; k++) {
+    const pts: string[] = [];
+    for (let i = 0; i < points; i++) {
+      const x = x0 + ((x1 - x0) * i) / (points - 1);
+      pts.push(`${x},${y0 + k * 20 + 0.02 * (x - x0)}`);
+    }
+    paths.push(`        <path type="staff-line" points="${pts.join(' ')}"/>`);
   }
-  return grid;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt><title>Mock Score (page 1)</title></titleStmt>
+      <publicationStmt><publisher>Mock</publisher></publicationStmt>
+      <sourceDesc><bibl><title>Mock Score Book</title></bibl></sourceDesc>
+    </fileDesc>
+    <encodingDesc>
+      <appInfo>
+        <application version="1" ident="homr" status="ok" confidence="1.000">
+          <label>homr</label>
+          <p>Mock OMR run.</p>
+        </application>
+      </appInfo>
+    </encodingDesc>
+  </teiHeader>
+  <facsimile>
+    <surface ulx="0" uly="0" lrx="750" lry="1000">
+      <graphic url="${MOCK_BASE}/image"/>
+      <zone xml:id="p1-staff-1" type="staff" ulx="50" uly="100" lrx="700" lry="240">
+${paths.join('\n')}
+      </zone>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <div type="score">
+${EMBEDDED_SCORE}
+      </div>
+    </body>
+  </text>
+</TEI>`;
 }
 
 function scoreManifest(): object {
@@ -65,32 +105,10 @@ function scoreManifest(): object {
         ],
         rendering: [
           {
-            id: SCORE_URL,
+            id: TEI_URL,
             type: 'Text',
-            format: 'application/vnd.recordare.musicxml+xml',
-            label: { en: ['Score (MusicXML)'] },
-          },
-        ],
-        annotations: [
-          {
-            id: `${MOCK_BASE}/annotations/p1.json`,
-            type: 'AnnotationPage',
-            items: [
-              {
-                id: `${MOCK_BASE}/annotation/staff-1`,
-                type: 'Annotation',
-                motivation: 'describing',
-                body: {
-                  type: 'TextualBody',
-                  format: 'application/json',
-                  value: JSON.stringify({
-                    staffGrid: staffGrid(50, 100, 700),
-                    staffLineCount: 5,
-                  }),
-                },
-                target: `${MOCK_BASE}/canvas/p1#xywh=50,100,650,140`,
-              },
-            ],
+            format: 'application/tei+xml',
+            label: { en: ['TEI (staff regions + embedded MusicXML)'] },
           },
         ],
       },
@@ -100,8 +118,8 @@ function scoreManifest(): object {
 
 async function mockScore(page: Page): Promise<void> {
   await mockIiif(page, { manifest: scoreManifest(), info: buildInfo() });
-  await page.route(SCORE_URL, (route) =>
-    route.fulfill({ body: SCORE_XML, contentType: 'application/xml' }),
+  await page.route(TEI_URL, (route) =>
+    route.fulfill({ body: pageTei(), contentType: 'application/xml' }),
   );
 }
 
@@ -139,7 +157,15 @@ async function openPlayer(page: Page): Promise<void> {
   const dock = page.locator('.tify-plugin-dock-btn');
   if ((await dock.getAttribute('aria-expanded')) !== 'true') await dock.click();
   await expect(page.locator('#panel')).toBeVisible();
-  await expect(page.locator('.player-controls')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.player-controls').first()).toBeVisible({ timeout: 30_000 });
+}
+
+/** Set a control value and fire its input event (color inputs and ranges). */
+async function setInputValue(page: Page, selector: string, value: string): Promise<void> {
+  await page.locator(selector).evaluate((el, v) => {
+    (el as HTMLInputElement).value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -163,6 +189,9 @@ test('plays a single track: monophonic onsets on the grid', async ({ page }) => 
   await interceptOscillators(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await openPlayer(page);
+  // Dual mode is on by default for two-staff scores; switch it off so only
+  // one staff plays and onsets stay monophonic.
+  await page.locator('.player-dual').uncheck();
   await page.locator('.player-btn').first().click();
   await page.waitForTimeout(2200);
   const starts = await oscStarts(page);
@@ -183,8 +212,10 @@ test('playback highlights staff, note marker and playhead', async ({ page }) => 
   // NB: the *computed* visibility must be checked — a CSS visibility rule
   // would silently override the visibility ATTRIBUTE and hide the layers
   // without failing attribute assertions.
+  // In dual mode (on by default for two-staff scores) each playing staff has
+  // its own highlight set — assert on the first one.
   for (const selector of ['.staff-current', '.note-marker', '.play-pos']) {
-    const layer = page.locator(selector);
+    const layer = page.locator(selector).first();
     await expect(layer).toHaveAttribute('visibility', 'visible', { timeout: 15_000 });
     await expect(layer).toHaveCSS('visibility', 'visible');
   }
@@ -194,7 +225,7 @@ test('note marker is sized proportionally to the staff geometry', async ({ page 
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await openPlayer(page);
   await page.locator('.player-btn').first().click();
-  const marker = page.locator('.note-marker');
+  const marker = page.locator('.note-marker').first();
   await expect(marker).toHaveAttribute('visibility', 'visible', { timeout: 15_000 });
   const r = parseFloat((await marker.getAttribute('r')) ?? '0');
   // Grid unit is 20 px here; the marker radius tracks staff line spacing.
@@ -237,6 +268,83 @@ test('instrument selection reschedules playback with the new waveform', async ({
   expect(second.length).toBeGreaterThan(first.length);
   expect(second[first.length]).toBeTruthy();
   expect(second[first.length].w).toBe('square');
+});
+
+test('score toggle hides and restores the rendered overlay', async ({ page }) => {
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  const scoreSystem = page.locator('.score-overlay > svg.score-system').first();
+  await expect(scoreSystem).toBeVisible({ timeout: 30_000 });
+  await page.locator('#player-score-toggle').uncheck();
+  await expect(page.locator('.score-overlay > svg.score-system')).toHaveCount(0);
+  await page.locator('#player-score-toggle').check();
+  await expect(page.locator('.score-overlay > svg.score-system').first()).toBeVisible({
+    timeout: 30_000,
+  });
+});
+
+test('region overlay defaults to visible homr-style regions', async ({ page }) => {
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  const region = page.locator('.region-overlay .staff-region').first();
+  await expect(region).toHaveAttribute('visibility', 'visible');
+  await expect(region).toHaveAttribute('fill', '#ff6400');
+  await expect(region).toHaveAttribute('fill-opacity', '0.25');
+});
+
+test('region overlay toggle, color and transparency controls apply live', async ({ page }) => {
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  const region = page.locator('.region-overlay .staff-region').first();
+  await expect(region).toHaveAttribute('visibility', 'visible');
+  // Off.
+  await page.locator('#player-region-toggle').uncheck();
+  await expect(region).toHaveAttribute('visibility', 'hidden');
+  // On again.
+  await page.locator('#player-region-toggle').check();
+  await expect(region).toHaveAttribute('visibility', 'visible');
+  // Color.
+  await setInputValue(page, '.player-region-color', '#008000');
+  await expect(region).toHaveAttribute('fill', '#008000');
+  // Transparency: 50% transparency -> fill-opacity 0.5.
+  await setInputValue(page, '.player-region-transparency', '50');
+  await expect(region).toHaveAttribute('fill-opacity', '0.5');
+});
+
+test('region controls are localized (?lang=de)', async ({ page }) => {
+  await page.goto(
+    `${EXAMPLE}?lang=de&manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`,
+  );
+  await openPlayer(page);
+  await expect(page.locator('.region-controls label[for="player-region-toggle"]')).toHaveText(
+    'Bereiche',
+  );
+});
+
+test('falls back to the plain MusicXML rendering without a TEI', async ({ page }) => {
+  const manifest = scoreManifest() as { items: Array<Record<string, unknown>> };
+  const canvas = manifest.items[0] as Record<string, unknown>;
+  canvas.rendering = [
+    {
+      id: SCORE_URL,
+      type: 'Text',
+      format: 'application/vnd.recordare.musicxml+xml',
+      label: { en: ['MusicXML'] },
+    },
+  ];
+  // Registered after beforeEach: the later route wins for the manifest URL
+  // (the TEI route from mockScore stays as is but is never referenced).
+  await page.route(`${MOCK_BASE}/manifest.json`, (route) => route.fulfill({ json: manifest }));
+  await page.route(SCORE_URL, (route) =>
+    route.fulfill({ body: SCORE_XML, contentType: 'application/xml' }),
+  );
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  // Without staff data nothing is mapped onto the scan: no score overlay,
+  // no region overlay — but the player itself works.
+  await expect(page.locator('.score-overlay')).toHaveCount(0);
+  await expect(page.locator('.region-overlay')).toHaveCount(0);
+  await expect(page.locator('.player-btn').first()).toBeVisible();
 });
 
 test('german player chrome (?lang=de)', async ({ page }) => {
@@ -288,31 +396,9 @@ function v2ScoreManifest(): object {
             ],
             rendering: [
               {
-                '@id': SCORE_URL,
+                '@id': TEI_URL,
                 '@type': 'dctypes:Text',
-                format: 'application/vnd.recordare.musicxml+xml',
-              },
-            ],
-            otherContent: [
-              {
-                '@id': `${MOCK_BASE}/annotations/p1.json`,
-                '@type': 'sc:AnnotationList',
-                resources: [
-                  {
-                    '@id': `${MOCK_BASE}/annotation/staff-1`,
-                    '@type': 'oa:Annotation',
-                    motivation: 'oa:commenting',
-                    resource: {
-                      '@type': 'cnt:ContentAsText',
-                      format: 'application/json',
-                      chars: JSON.stringify({
-                        staffGrid: staffGrid(50, 100, 700),
-                        staffLineCount: 5,
-                      }),
-                    },
-                    on: `${MOCK_BASE}/canvas/p1#xywh=50,100,650,140`,
-                  },
-                ],
+                format: 'application/tei+xml',
               },
             ],
           },
@@ -322,9 +408,9 @@ function v2ScoreManifest(): object {
   };
 }
 
-test('discovers a v2 score rendering and staff grid', async ({ page }) => {
+test('discovers a v2 TEI rendering', async ({ page }) => {
   // Registered after beforeEach: the later route wins for the manifest URL
-  // (the score-XML route from mockScore stays as is).
+  // (the TEI route from mockScore stays as is).
   await page.route(`${MOCK_BASE}/manifest.json`, (route) =>
     route.fulfill({ json: v2ScoreManifest() }),
   );

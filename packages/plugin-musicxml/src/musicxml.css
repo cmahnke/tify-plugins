@@ -67,6 +67,27 @@
   color: #b42318;
 }
 
+/* Persistent staff-region overlay (page-pixel viewBox, one rect per TEI
+   staff zone). NB: its visibility is controlled by the visibility ATTRIBUTE
+   from JS — a CSS visibility rule here would override the attribute and
+   permanently hide the layer. */
+.staff-region {
+  pointer-events: none;
+}
+
+.player-score,
+.player-regions {
+  cursor: pointer;
+}
+
+.player-controls input[type='color'] {
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
 /* OSMD score overlaid on the scan (page-pixel viewBox svg; each system is a
    nested <svg> mapped onto its staff region). */
 .score-overlay {

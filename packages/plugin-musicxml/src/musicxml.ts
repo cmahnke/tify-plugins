@@ -4,12 +4,16 @@
 // aligned onto the scan, with Web Audio playback, tempo/track/instrument
 // controls, and note/staff highlights that follow the performance.
 //
-// Data contract (per canvas): the MusicXML document is discovered via the
-// canvas `rendering` entries (format `application/vnd.recordare.musicxml+xml`
-// or an `.musicxml` id, resolved against the manifest URL); staff geometry
-// comes from describing annotations whose `#xywh` target is the staff region
-// and whose body carries the OMR grid as JSON (`staffGrid`, `staffLineCount`).
-// Without staff data the score falls back to a whole-page letterbox layout.
+// Data contract (per canvas): the score data comes from the homr pipeline's
+// TEI document, discovered via the canvas `rendering` entries (format
+// `application/tei+xml` or an `.tei.xml` id, resolved against the manifest
+// URL) — the TEI carries the staff geometry (<zone type="staff">) and the
+// embedded MusicXML in one document. Without a TEI the plain MusicXML
+// rendering (format `application/vnd.recordare.musicxml+xml` or an
+// `.musicxml` id) is used as a fallback: playback works, but nothing is
+// mapped onto the scan (no aligned score, no staff regions). Without any
+// score reference the panel reports that the page has no score; playback
+// needs no image at all.
 import type Tify from 'tify';
 import {
   canvasesOf,
@@ -28,7 +32,17 @@ import { MusicPlayer, type Instrument, type TrackConfig } from './audio';
 import { noteCoordOnStaff, type StaffEntry } from './note-map';
 import { parseMusicXML, type MusicTimeline, type ParsedNote } from './musicxml-timeline';
 import { OsmdRenderer, type ScorePiece } from './osmd-renderer';
+import { parseTei } from './tei';
 import './musicxml.css';
+
+export interface RegionOverlayOptions {
+  /** Show the staff regions on the scan (default true). */
+  enabled?: boolean;
+  /** Region fill/border color, any CSS color (default '#ff6400'). */
+  color?: string;
+  /** Region fill opacity 0–1 (default 0.25). */
+  opacity?: number;
+}
 
 export interface MusicXmlOptions {
   /** Panel content host (sidecar unless docked into the viewer). */
@@ -40,12 +54,16 @@ export interface MusicXmlOptions {
   dock?: boolean | 'auto';
   /** Open the docked panel after init (default true). */
   autoOpen?: boolean;
-  /** MusicXML override: absolute URL or raw XML. Defaults to the canvas `rendering`. */
+  /** TEI override: absolute URL or raw TEI XML. Defaults to the canvas `rendering`. */
+  tei?: string;
+  /** MusicXML override: absolute URL or raw XML. Wins over the TEI-embedded score. */
   musicxml?: string;
-  /** Render the aligned score onto the scan (default true). */
+  /** Render the aligned score onto the scan (default true, runtime toggle in the panel). */
   showScoreOverlay?: boolean;
   /** Staff band, note marker and playhead highlights (default true). */
   showHighlights?: boolean;
+  /** Persistent staff-region overlay on the scan (default on, #ff6400, 25% fill). */
+  regionOverlay?: RegionOverlayOptions;
 }
 
 export interface MusicXmlPlugin extends TifyPlugin {
@@ -54,6 +72,9 @@ export interface MusicXmlPlugin extends TifyPlugin {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MUSICXML_FORMAT = 'application/vnd.recordare.musicxml+xml';
+const TEI_FORMAT = 'application/tei+xml';
+const DEFAULT_REGION_COLOR = '#ff6400';
+const DEFAULT_REGION_OPACITY = 0.25;
 
 let scoreMountSeq = 0;
 
@@ -212,58 +233,13 @@ function osmdToPage(piece: ScorePiece, pos: { x: number; y: number }): { x: numb
   };
 }
 
-/** bbox [x, y, x1, y1] in page pixels from a "#xywh=x,y,w,h" target. */
-function xywhToBbox(target: string): [number, number, number, number] | null {
-  const fragment = target.split('#xywh=')[1];
-  if (!fragment) return null;
-  const [x, y, w, h] = fragment.split(',').map((v) => Number.parseInt(v, 10));
-  if (![x, y, w, h].every((v) => Number.isFinite(v))) return null;
-  return [x, y, x + w, y + h];
-}
-
-interface StaffBody {
-  staffGrid?: Array<{ x: number; y: number[] }>;
-  staffLineCount?: number;
-}
-
-/** Parse the OMR staff data from a describing annotation's JSON body. */
-function staffFromBody(value: string | undefined): StaffBody | null {
-  if (!value) return null;
-  try {
-    const parsed: unknown = JSON.parse(value);
-    if (parsed && typeof parsed === 'object' && 'staffGrid' in parsed) {
-      return parsed as StaffBody;
-    }
-  } catch {
-    /* malformed body — ignore the annotation */
-  }
-  return null;
-}
-
-/** Normalize an annotation body to its JSON string (object, array or string form). */
-function bodyValue(body: unknown): string | undefined {
-  if (typeof body === 'string') return body;
-  if (Array.isArray(body)) {
-    for (const entry of body) {
-      const value = bodyValue(entry);
-      if (value !== undefined) return value;
-    }
-    return undefined;
-  }
-  if (body && typeof body === 'object') {
-    // v3 `value`, v2 OA `chars`.
-    const value =
-      (body as { value?: unknown; chars?: unknown }).value ?? (body as { chars?: unknown }).chars;
-    return typeof value === 'string' ? value : undefined;
-  }
-  return undefined;
-}
-
 interface PageScore {
   width: number;
   height: number;
+  /** homr TEI document: staff geometry + embedded MusicXML */
+  teiUrl: string | null;
+  /** plain MusicXML fallback (score only, letterbox layout) */
   musicxmlUrl: string | null;
-  staves: StaffEntry[];
 }
 
 function resolveUrl(id: string | undefined, base: string): string | null {
@@ -275,7 +251,21 @@ function resolveUrl(id: string | undefined, base: string): string | null {
   }
 }
 
-/** Score data of one canvas: MusicXML URL plus staff entries (may be empty). */
+/** First matching canvas `rendering` entry, resolved against the manifest URL. */
+function renderingUrl(
+  renderings: any[],
+  manifestUrl: string,
+  match: (id: string, format: string) => boolean,
+): string | null {
+  for (const rendering of renderings) {
+    const id = typeof rendering === 'string' ? rendering : (rendering?.id ?? rendering?.['@id']);
+    const format = typeof rendering === 'object' ? String(rendering?.format ?? '') : '';
+    if (typeof id === 'string' && match(id, format)) return resolveUrl(id, manifestUrl);
+  }
+  return null;
+}
+
+/** Score references of one canvas (staff geometry comes from the TEI only). */
 function pageScore(manifest: any, manifestUrl: string, page: number): PageScore | null {
   const canvas = canvasesOf(manifest)[page - 1];
   if (!canvas) return null;
@@ -288,49 +278,20 @@ function pageScore(manifest: any, manifestUrl: string, page: number): PageScore 
     : canvas?.rendering
       ? [canvas.rendering]
       : [];
-  let musicxmlUrl: string | null = null;
-  for (const rendering of renderings) {
-    const id = typeof rendering === 'string' ? rendering : (rendering?.id ?? rendering?.['@id']);
-    const format = typeof rendering === 'object' ? String(rendering?.format ?? '') : '';
-    if (typeof id === 'string' && (format === MUSICXML_FORMAT || id.endsWith('.musicxml'))) {
-      musicxmlUrl = resolveUrl(id, manifestUrl);
-      break;
-    }
-  }
-
-  const staves: StaffEntry[] = [];
-  // v3 `annotations`/`items`, v2 `otherContent`/`resources`; v2 targets live
-  // in `on` and grid JSON in `resource` — both normalized below.
-  const annotationPages = [
-    ...(Array.isArray(canvas?.annotations) ? canvas.annotations : []),
-    ...(Array.isArray(canvas?.otherContent) ? canvas.otherContent : []),
-  ];
-  for (const annotationPage of annotationPages) {
-    const entries = [
-      ...(Array.isArray(annotationPage?.items) ? annotationPage.items : []),
-      ...(Array.isArray(annotationPage?.resources) ? annotationPage.resources : []),
-    ];
-    for (const raw of entries) {
-      const annotation =
-        raw?.target === undefined && raw?.on !== undefined ? { ...raw, target: raw.on } : raw;
-      const target =
-        typeof annotation?.target === 'string'
-          ? annotation.target
-          : (annotation?.target?.id ?? annotation?.target?.source);
-      if (typeof target !== 'string') continue;
-      const bbox = xywhToBbox(target);
-      if (!bbox) continue;
-      const body = staffFromBody(bodyValue(annotation?.body ?? annotation?.resource));
-      if (!body) continue;
-      staves.push({
-        bbox,
-        lineCount: body.staffLineCount ?? 5,
-        grid: body.staffGrid,
-      });
-    }
-  }
-
-  return { width, height, musicxmlUrl, staves };
+  return {
+    width,
+    height,
+    teiUrl: renderingUrl(
+      renderings,
+      manifestUrl,
+      (id, format) => format === TEI_FORMAT || id.endsWith('.tei.xml'),
+    ),
+    musicxmlUrl: renderingUrl(
+      renderings,
+      manifestUrl,
+      (id, format) => format === MUSICXML_FORMAT || id.endsWith('.musicxml'),
+    ),
+  };
 }
 
 export async function musicxmlPlugin(
@@ -386,8 +347,27 @@ export async function musicxmlPlugin(
       const manifest = await getManifest(tify);
       if (disposed || token !== drawToken) return;
       const pageData = pageScore(manifest, manifestUrl, pages[0]);
-      // Explicit override wins; otherwise the canvas `rendering` is used.
-      const source = options.musicxml ?? pageData?.musicxmlUrl ?? null;
+      // The TEI is one fetch carrying both the staff geometry and the score.
+      const teiSource = options.tei ?? pageData?.teiUrl ?? null;
+      let staves: StaffEntry[] = [];
+      let teiMusicxml: string | null = null;
+      if (teiSource) {
+        panel.status.textContent = t('Loading score…');
+        const trimmedTei = teiSource.trimStart();
+        const teiText =
+          trimmedTei.startsWith('<') || trimmedTei.startsWith('<?xml')
+            ? teiSource
+            : await fetchText(teiSource);
+        if (disposed || token !== drawToken) return;
+        const parsed = parseTei(teiText);
+        if (parsed) {
+          staves = parsed.staves;
+          teiMusicxml = parsed.musicxmlText;
+        }
+      }
+      // Explicit MusicXML override wins over the TEI-embedded copy; the loose
+      // MusicXML rendering is the fallback when there is no usable TEI.
+      const source = options.musicxml ?? teiMusicxml ?? pageData?.musicxmlUrl ?? null;
       if (!source) {
         panel.status.textContent = t('No score on this page');
         return;
@@ -405,7 +385,7 @@ export async function musicxmlPlugin(
         {
           width: pageData?.width ?? 0,
           height: pageData?.height ?? 0,
-          staves: pageData?.staves ?? [],
+          staves,
         },
         xmlText,
         token,
@@ -425,6 +405,7 @@ export async function musicxmlPlugin(
   const setupScore = (score: ScoreDims, xmlText: string, token: number): void => {
     const timeline: MusicTimeline = parseMusicXML(xmlText);
     const staffEntries = score.staves;
+    const regionOpts = options.regionOverlay ?? {};
 
     const controls = document.createElement('div');
     controls.className = 'player-controls';
@@ -459,15 +440,15 @@ export async function musicxmlPlugin(
     controls.append(playBtn, pauseBtn, stopBtn, tempoLabel, tempo);
 
     // A page score may carry several staves (e.g. a grand staff with two
-    // voices); by default only one staff is played so the tracks don't stack
-    // on top of each other. Dual mode plays two staves at once, each with its
-    // own instrument.
+    // voices); like the score-page viewer, dual mode plays two staves at
+    // once, each with its own instrument, and is on by default whenever the
+    // score carries two note streams.
     const presentStaffs = [...new Set(timeline.notes.map((n) => n.staff))].sort((a, b) => a - b);
     let trackA = presentStaffs[0] ?? 1;
     let trackB = presentStaffs[1] ?? trackA;
     let instrumentA: Instrument = 'piano';
     let instrumentB: Instrument = 'piano';
-    let dual = false;
+    let dual = presentStaffs.length > 1;
 
     const trackLabel = document.createElement('span');
     trackLabel.className = 'player-tempo';
@@ -518,6 +499,7 @@ export async function musicxmlPlugin(
       dualBox.type = 'checkbox';
       dualBox.className = 'player-dual';
       dualBox.id = 'player-dual-toggle';
+      dualBox.checked = dual;
       const dualLabel = document.createElement('label');
       dualLabel.className = 'player-tempo';
       dualLabel.htmlFor = 'player-dual-toggle';
@@ -536,17 +518,126 @@ export async function musicxmlPlugin(
     } else {
       controls.classList.add('single-track');
     }
+
+    // Toggle for the rendered score overlay (OpenSheetMusicDisplay mapped
+    // onto the scan). The OSMD render itself keeps running while anything
+    // consumes its alignment data; the overlay is only mounted while on.
+    const scoreBox = document.createElement('input');
+    scoreBox.type = 'checkbox';
+    scoreBox.className = 'player-score';
+    scoreBox.id = 'player-score-toggle';
+    scoreBox.checked = showScoreOverlay;
+    const scoreLabel = document.createElement('label');
+    scoreLabel.className = 'player-tempo';
+    scoreLabel.htmlFor = 'player-score-toggle';
+    scoreLabel.textContent = t('Score');
+    controls.append(scoreLabel, scoreBox);
+
+    // Region overlay state: one persistent rect per detected staff region,
+    // styled live by the panel controls (added to the DOM below).
+    let showRegions = regionOpts.enabled ?? true;
+    let regionColor = regionOpts.color ?? DEFAULT_REGION_COLOR;
+    let regionOpacity = regionOpts.opacity ?? DEFAULT_REGION_OPACITY;
+    const regionSvg =
+      staffEntries.length > 0 && score.width > 0 && score.height > 0
+        ? document.createElementNS(SVG_NS, 'svg')
+        : null;
+    if (regionSvg) {
+      regionSvg.setAttribute('viewBox', `0 0 ${String(score.width)} ${String(score.height)}`);
+      regionSvg.classList.add('staff-overlay', 'region-overlay');
+      for (const staff of staffEntries) {
+        const [x0, y0, x1, y1] = staff.bbox;
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('class', 'staff-region');
+        rect.setAttribute('x', String(x0));
+        rect.setAttribute('y', String(y0));
+        rect.setAttribute('width', String(Math.max(0, x1 - x0)));
+        rect.setAttribute('height', String(Math.max(0, y1 - y0)));
+        rect.setAttribute('fill', regionColor);
+        rect.setAttribute('fill-opacity', String(regionOpacity));
+        rect.setAttribute('stroke', regionColor);
+        rect.setAttribute('stroke-opacity', '0.9');
+        rect.setAttribute('stroke-width', '3');
+        regionSvg.appendChild(rect);
+      }
+    }
+    const applyRegionStyle = (): void => {
+      if (!regionSvg) return;
+      for (const rect of Array.from(regionSvg.querySelectorAll('rect'))) {
+        rect.setAttribute('fill', regionColor);
+        rect.setAttribute('fill-opacity', String(regionOpacity));
+        rect.setAttribute('stroke', regionColor);
+      }
+    };
+    const applyRegionVisibility = (): void => {
+      if (!regionSvg) return;
+      for (const rect of Array.from(regionSvg.querySelectorAll('rect'))) {
+        rect.setAttribute('visibility', showRegions ? 'visible' : 'hidden');
+      }
+    };
+
+    let regionBox: HTMLInputElement | null = null;
+    let regionControls: HTMLDivElement | null = null;
+    if (regionSvg) {
+      // Region overlay controls (on/off, color, transparency) — the same
+      // controls as the score-page viewer's player panel.
+      regionControls = document.createElement('div');
+      regionControls.className = 'player-controls region-controls';
+      const regionLabel = document.createElement('label');
+      regionLabel.className = 'player-tempo';
+      regionLabel.htmlFor = 'player-region-toggle';
+      regionLabel.textContent = t('Regions');
+      regionBox = document.createElement('input');
+      regionBox.type = 'checkbox';
+      regionBox.className = 'player-regions';
+      regionBox.id = 'player-region-toggle';
+      regionBox.checked = showRegions;
+      const colorLabel = document.createElement('span');
+      colorLabel.className = 'player-tempo';
+      colorLabel.textContent = t('Color');
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.className = 'player-region-color';
+      colorInput.value = regionColor;
+      const transLabel = document.createElement('span');
+      transLabel.className = 'player-tempo';
+      transLabel.textContent = t('Transparency');
+      const transInput = document.createElement('input');
+      transInput.type = 'range';
+      transInput.className = 'player-region-transparency';
+      transInput.min = '0';
+      transInput.max = '100';
+      transInput.step = '5';
+      transInput.value = String(Math.round((1 - regionOpacity) * 100));
+      regionControls.append(regionLabel, regionBox, colorLabel, colorInput, transLabel, transInput);
+      regionBox.addEventListener('change', () => {
+        showRegions = regionBox?.checked ?? true;
+        applyRegionVisibility();
+      });
+      colorInput.addEventListener('input', () => {
+        regionColor = colorInput.value;
+        applyRegionStyle();
+      });
+      transInput.addEventListener('input', () => {
+        regionOpacity = 1 - (Number.parseInt(transInput.value, 10) || 0) / 100;
+        applyRegionStyle();
+      });
+      applyRegionVisibility();
+    }
+
     panel.body.append(controls);
+    if (regionControls) panel.body.append(regionControls);
 
     // The rendered score lives in a page-pixel-space SVG overlay, so
     // OpenSeadragon scales it with pan/zoom. After OSMD renders, every system
     // (or sub-staff of a grand staff system) is affine-mapped onto the
-    // detected staff region of the scan.
+    // detected staff region of the scan. The render keeps running while
+    // anything consumes its alignment data (piece rects, system-entry
+    // mapping, cursor position for the playhead); the rendered overlay
+    // itself is only mounted while the Score toggle is on.
     const needsOsmd = showScoreOverlay || showHighlights;
     const scoreSvg =
-      showScoreOverlay && score.width > 0 && score.height > 0
-        ? document.createElementNS(SVG_NS, 'svg')
-        : null;
+      score.width > 0 && score.height > 0 ? document.createElementNS(SVG_NS, 'svg') : null;
     if (scoreSvg) {
       scoreSvg.setAttribute('viewBox', `0 0 ${String(score.width)} ${String(score.height)}`);
       scoreSvg.classList.add('staff-overlay', 'score-overlay');
@@ -562,35 +653,74 @@ export async function musicxmlPlugin(
     }
 
     const renderer = new OsmdRenderer();
-    const rendered: Promise<void> | null = needsOsmd
-      ? renderer.render(xmlText, staffEntries)
-      : null;
     const viewer = tify.viewer;
     const removeOverlays: Array<() => void> = [];
+
+    // The score content is mounted at most once; the Score toggle only
+    // adds/removes the overlay itself.
+    let showScore = showScoreOverlay;
+    let scoreOverlayAdded = false;
+    let scoreContentMounted = false;
+    let removeScoreOverlay: (() => void) | null = null;
+    const updateScoreOverlay = (): void => {
+      // Without a layout (no staff data to align to) there is nothing to
+      // show — the overlay stays unmounted.
+      if (!scoreSvg || !showScore || !renderer.getLayout()) return;
+      if (!scoreOverlayAdded) {
+        removeScoreOverlay = addViewportOverlay(viewer, scoreSvg, 0, 0, score.width, score.height);
+        scoreOverlayAdded = true;
+      }
+      if (!scoreContentMounted) {
+        void waitConnected(scoreSvg)
+          .catch(() => undefined)
+          .then(() => {
+            if (disposed || token !== drawToken || scoreContentMounted || !showScore) return;
+            mountScore(scoreSvg, renderer);
+            scoreContentMounted = true;
+          });
+      }
+    };
+    let rendered: Promise<void> | null = null;
+    const ensureRendered = (): void => {
+      if (rendered) return;
+      rendered = renderer.render(xmlText, staffEntries);
+      void rendered
+        .then(() => {
+          if (disposed || token !== drawToken) return;
+          updateScoreOverlay();
+          pruneUnmatchedRects(overlaySvg, renderer.getLayout()?.pieces ?? []);
+        })
+        .catch((error: unknown) => {
+          console.error('OSMD render failed:', error);
+        });
+    };
+    if (needsOsmd) ensureRendered();
+
     const mountOverlays = (): void => {
       if (disposed || token !== drawToken) return;
       if (score.width <= 0 || score.height <= 0) return;
-      if (scoreSvg) {
-        removeOverlays.push(addViewportOverlay(viewer, scoreSvg, 0, 0, score.width, score.height));
-      }
       if (overlaySvg) {
         removeOverlays.push(
           addViewportOverlay(viewer, overlaySvg, 0, 0, score.width, score.height),
         );
       }
+      if (regionSvg) {
+        removeOverlays.push(addViewportOverlay(viewer, regionSvg, 0, 0, score.width, score.height));
+      }
     };
-    // The overlays only enter the DOM after the tile source opens; mount the
-    // score once both the render and the attachment are done.
-    void Promise.all([rendered, scoreSvg ? waitConnected(scoreSvg).catch(() => undefined) : null])
-      .then(() => {
-        if (disposed || token !== drawToken) return;
-        if (scoreSvg) mountScore(scoreSvg, renderer);
-        pruneUnmatchedRects(overlaySvg, renderer.getLayout()?.pieces ?? []);
-      })
-      .catch((error: unknown) => {
-        console.error('OSMD render failed:', error);
-      });
     mountOverlays();
+
+    scoreBox.addEventListener('change', () => {
+      showScore = scoreBox.checked;
+      if (showScore) {
+        ensureRendered();
+        updateScoreOverlay();
+      } else if (scoreOverlayAdded && removeScoreOverlay) {
+        removeScoreOverlay();
+        removeScoreOverlay = null;
+        scoreOverlayAdded = false;
+      }
+    });
 
     const player = new MusicPlayer(timeline);
 
@@ -640,18 +770,31 @@ export async function musicxmlPlugin(
       return k;
     }
 
-    let currentStaffRect: SVGRectElement | null = null;
-    let currentNoteMarker: SVGCircleElement | null = null;
-    let currentPosLine: SVGLineElement | null = null;
+    interface HighlightSet {
+      staffRect: SVGRectElement | null;
+      noteMarker: SVGCircleElement | null;
+      posLine: SVGLineElement | null;
+    }
+    const highlightSets = new Map<number, HighlightSet>();
+    function highlightsFor(staff: number): HighlightSet {
+      let set = highlightSets.get(staff);
+      if (!set) {
+        set = { staffRect: null, noteMarker: null, posLine: null };
+        highlightSets.set(staff, set);
+      }
+      return set;
+    }
 
     function clearHighlights(): void {
-      if (currentStaffRect) {
-        currentStaffRect.setAttribute('visibility', 'hidden');
-        currentStaffRect.setAttribute('width', '0');
-        currentStaffRect.setAttribute('height', '0');
+      for (const set of highlightSets.values()) {
+        if (set.staffRect) {
+          set.staffRect.setAttribute('visibility', 'hidden');
+          set.staffRect.setAttribute('width', '0');
+          set.staffRect.setAttribute('height', '0');
+        }
+        if (set.noteMarker) set.noteMarker.setAttribute('visibility', 'hidden');
+        if (set.posLine) set.posLine.setAttribute('visibility', 'hidden');
       }
-      if (currentNoteMarker) currentNoteMarker.setAttribute('visibility', 'hidden');
-      if (currentPosLine) currentPosLine.setAttribute('visibility', 'hidden');
     }
 
     /** The staff entry a MusicXML system was aligned to (-1 when unknown). */
@@ -672,6 +815,7 @@ export async function musicxmlPlugin(
 
     function highlightStaff(system: number, staff: number): void {
       if (!overlaySvg || !showHighlights) return;
+      const set = highlightsFor(staff);
       const entry = entryForSystem(system);
       // Prefer the aligned piece rect: it marks exactly the sub-staff region
       // the score was mapped to, not the whole (possibly two-staff) entry.
@@ -688,30 +832,30 @@ export async function musicxmlPlugin(
         return;
       }
       const [x0, y0, x1, y1] = box;
-      if (!currentStaffRect) {
-        currentStaffRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        currentStaffRect.setAttribute('class', 'staff-current');
-        currentStaffRect.setAttribute('visibility', 'hidden');
-        overlaySvg.appendChild(currentStaffRect);
+      if (!set.staffRect) {
+        set.staffRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        set.staffRect.setAttribute('class', 'staff-current');
+        set.staffRect.setAttribute('visibility', 'hidden');
+        overlaySvg.appendChild(set.staffRect);
       }
-      currentStaffRect.setAttribute('x', String(x0));
-      currentStaffRect.setAttribute('y', String(y0));
-      currentStaffRect.setAttribute('width', String(x1 - x0));
-      currentStaffRect.setAttribute('height', String(y1 - y0));
-      currentStaffRect.setAttribute('visibility', 'visible');
+      set.staffRect.setAttribute('x', String(x0));
+      set.staffRect.setAttribute('y', String(y0));
+      set.staffRect.setAttribute('width', String(x1 - x0));
+      set.staffRect.setAttribute('height', String(y1 - y0));
+      set.staffRect.setAttribute('visibility', 'visible');
       // The position line spans the current staff region; its extent is set
       // per note in highlightNote (a bold vertical playhead).
-      if (!currentPosLine) {
-        currentPosLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        currentPosLine.setAttribute('class', 'play-pos');
-        currentPosLine.setAttribute('visibility', 'hidden');
-        overlaySvg.appendChild(currentPosLine);
+      if (!set.posLine) {
+        set.posLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        set.posLine.setAttribute('class', 'play-pos');
+        set.posLine.setAttribute('visibility', 'hidden');
+        overlaySvg.appendChild(set.posLine);
       }
-      currentPosLine.setAttribute('x1', String(x0));
-      currentPosLine.setAttribute('x2', String(x0));
-      currentPosLine.setAttribute('y1', String(y0));
-      currentPosLine.setAttribute('y2', String(y1));
-      currentPosLine.setAttribute('stroke-width', String(Math.max(6, (y1 - y0) * 0.1)));
+      set.posLine.setAttribute('x1', String(x0));
+      set.posLine.setAttribute('x2', String(x0));
+      set.posLine.setAttribute('y1', String(y0));
+      set.posLine.setAttribute('y2', String(y1));
+      set.posLine.setAttribute('stroke-width', String(Math.max(6, (y1 - y0) * 0.1)));
     }
 
     function highlightNote(index: number): void {
@@ -719,6 +863,7 @@ export async function musicxmlPlugin(
       if (!note) return;
       highlightStaff(note.system, note.staff);
       if (!overlaySvg) return;
+      const set = highlightsFor(note.staff);
       const entry = entryForSystem(note.system);
       const coord = noteCoordOnStaff(
         timeline,
@@ -737,34 +882,40 @@ export async function musicxmlPlugin(
         const refined = osmdToPage(piece, cursor).x;
         if (Math.abs(refined - coord.x) < piece.width * 0.2) x = refined;
       }
-      if (!currentNoteMarker) {
-        currentNoteMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        currentNoteMarker.setAttribute('class', 'note-marker');
-        currentNoteMarker.setAttribute('visibility', 'hidden');
-        overlaySvg.appendChild(currentNoteMarker);
+      if (!set.noteMarker) {
+        set.noteMarker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        set.noteMarker.setAttribute('class', 'note-marker');
+        set.noteMarker.setAttribute('visibility', 'hidden');
+        overlaySvg.appendChild(set.noteMarker);
       }
-      currentNoteMarker.setAttribute('r', String(coord.r));
-      currentNoteMarker.setAttribute('cx', String(x));
-      currentNoteMarker.setAttribute('cy', String(coord.y));
-      currentNoteMarker.setAttribute('stroke-width', String(Math.max(4, coord.unit * 0.3)));
-      currentNoteMarker.setAttribute('visibility', 'visible');
+      set.noteMarker.setAttribute('r', String(coord.r));
+      set.noteMarker.setAttribute('cx', String(x));
+      set.noteMarker.setAttribute('cy', String(coord.y));
+      set.noteMarker.setAttribute('stroke-width', String(Math.max(4, coord.unit * 0.3)));
+      set.noteMarker.setAttribute('visibility', 'visible');
       // A bold vertical playhead at the same x: at fit zoom the page is shown
       // at a fraction of its pixel size, so a note-sized dot alone is nearly
       // invisible — the line carries the position.
-      if (currentPosLine) {
-        currentPosLine.setAttribute('x1', String(x));
-        currentPosLine.setAttribute('x2', String(x));
-        currentPosLine.setAttribute('visibility', 'visible');
+      if (set.posLine) {
+        set.posLine.setAttribute('x1', String(x));
+        set.posLine.setAttribute('x2', String(x));
+        set.posLine.setAttribute('visibility', 'visible');
       }
     }
 
     player.setCallbacks({
       onNote: (note, index) => {
-        // In dual mode only the primary track (A) drives the highlights; the
-        // second track would otherwise fight the marker for position.
-        if (note.staff !== trackA || !showHighlights) return;
-        // Advance the OSMD cursor first so the marker reads the fresh position.
-        renderer.highlightNote(osmdStepsBefore(note, trackA));
+        if (!showHighlights) return;
+        // Each playing track drives its own highlight set, so dual mode shows
+        // the current position on both staves; notes of staves that are not
+        // playing are ignored. OSMD's single cursor still follows the primary
+        // track only.
+        const audible = note.staff === trackA || (dual && note.staff === trackB);
+        if (!audible) return;
+        if (note.staff === trackA) {
+          // Advance the OSMD cursor first so the marker reads the fresh position.
+          renderer.highlightNote(osmdStepsBefore(note, trackA));
+        }
         highlightNote(index);
       },
       onEnd: () => {
@@ -838,8 +989,10 @@ export async function musicxmlPlugin(
       player.dispose();
       renderer.dispose();
       for (const remove of removeOverlays) remove();
+      removeScoreOverlay?.();
       scoreSvg?.remove();
       overlaySvg?.remove();
+      regionSvg?.remove();
     };
   };
 

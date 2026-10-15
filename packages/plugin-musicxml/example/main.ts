@@ -29,8 +29,9 @@ applyStaticTranslations(t, lang);
 const params = new URLSearchParams(window.location.search);
 const input = document.querySelector('#manifest') as HTMLInputElement;
 input.value = params.get('manifest') ?? COOKBOOK_MANIFEST;
-// Optional MusicXML override (?musicxml=<url>), passed straight through to
-// the plugin — handy for trying the player without authoring a manifest.
+// Optional overrides (?tei=<url>, ?musicxml=<url>), passed straight through
+// to the plugin — handy for trying the player without authoring a manifest.
+const teiOverride = params.get('tei') ?? undefined;
 const musicxmlOverride = params.get('musicxml') ?? undefined;
 
 let tify: Tify | null = null;
@@ -50,6 +51,7 @@ async function load(manifestUrl: string): Promise<void> {
     await tify.ready;
     plugin = await musicxmlPlugin(tify, {
       panelEl: document.querySelector('#panel') as HTMLElement,
+      tei: teiOverride,
       musicxml: musicxmlOverride,
     });
   } catch (error) {

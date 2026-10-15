@@ -16,15 +16,15 @@ Each workspace is independently publishable: it carries its own `package.json`,
 README, example, and translations; `npm publish --workspace …` ships only
 `dist/` (plus core's `style.css`) — examples and sources stay dev-only.
 
-| Package                                                                      | npm name                                     | What it does                                            |
-| ---------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------- |
-| [`packages/core`](packages/core/README.md)                                   | `@projektemacher/tify-plugin-core`           | Plugin contract, i18n, IIIF/dock helpers, panel styles  |
-| [`packages/plugin-side-panel`](packages/plugin-side-panel/README.md)         | `@projektemacher/tify-plugin-side-panel`     | Custom metadata panel beside the viewer                 |
-| [`packages/plugin-image-overlays`](packages/plugin-image-overlays/README.md) | `@projektemacher/tify-plugin-image-overlays` | OpenSeadragon overlays synced to pages (TEI word boxes) |
-| [`packages/plugin-hdr`](packages/plugin-hdr/README.md)                       | `@projektemacher/tify-plugin-hdr`            | HDR canvas status + image service check                 |
-| [`packages/plugin-c2pa`](packages/plugin-c2pa/README.md)                     | `@projektemacher/tify-plugin-c2pa`           | Per-tile C2PA provenance with trust anchors             |
-| [`packages/plugin-annotorious`](packages/plugin-annotorious/README.md)       | `@projektemacher/tify-plugin-annotorious`    | Display-only Annotorious annotations from the manifest  |
-| [`packages/plugin-musicxml`](packages/plugin-musicxml/README.md)             | `@projektemacher/tify-plugin-musicxml`       | Rendered MusicXML score with playback                   |
+| Package                                                                      | npm name                                     | What it does                                              |
+| ---------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| [`packages/core`](packages/core/README.md)                                   | `@projektemacher/tify-plugin-core`           | Plugin contract, i18n, IIIF/dock helpers, panel styles    |
+| [`packages/plugin-side-panel`](packages/plugin-side-panel/README.md)         | `@projektemacher/tify-plugin-side-panel`     | Custom metadata panel beside the viewer                   |
+| [`packages/plugin-image-overlays`](packages/plugin-image-overlays/README.md) | `@projektemacher/tify-plugin-image-overlays` | OpenSeadragon overlays synced to pages (TEI word boxes)   |
+| [`packages/plugin-hdr`](packages/plugin-hdr/README.md)                       | `@projektemacher/tify-plugin-hdr`            | HDR canvas status + image service check                   |
+| [`packages/plugin-c2pa`](packages/plugin-c2pa/README.md)                     | `@projektemacher/tify-plugin-c2pa`           | Per-tile C2PA provenance with trust anchors               |
+| [`packages/plugin-annotorious`](packages/plugin-annotorious/README.md)       | `@projektemacher/tify-plugin-annotorious`    | Display-only Annotorious annotations from the manifest    |
+| [`packages/plugin-musicxml`](packages/plugin-musicxml/README.md)             | `@projektemacher/tify-plugin-musicxml`       | Rendered MusicXML score with playback (from the homr TEI) |
 
 Rules that keep this shippable: `tify` (and `openseadragon` where imported
 directly) are `peerDependencies` — the viewer must exist exactly once.
@@ -50,7 +50,7 @@ examples actually load — is authored separately (IIIF Cookbook style).
 | hdr                        | [`--source ultrahdr --sink ultrahdr`](https://github.com/cmahnke/fliiifenleger#ultrahdr-gain-map-tiling) — UltraHDR tiles advertise exactly the `https://christianmahnke.de/iiif/hdr/` service this plugin detects              |
 | c2pa                       | [`--sink c2pa`](https://github.com/cmahnke/fliiifenleger#c2pa-content-credentials) with `--iiif-version V3`; `--sink-opt trust-anchor=…` advertises the `trustAnchor` URI this plugin's `trustAnchors` option validates against |
 | annotorious                | default `generate`; the `xywh` annotations are added afterwards at the Presentation-manifest level                                                                                                                              |
-| musicxml                   | score data (MusicXML + staff grids) comes from the [homr OMR pipeline](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher); image services themselves are plain `generate` output                                         |
+| musicxml                   | score data (staff TEI + embedded MusicXML) comes from the [homr OMR pipeline](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher); image services themselves are plain `generate` output                                  |
 
 ## Examples
 

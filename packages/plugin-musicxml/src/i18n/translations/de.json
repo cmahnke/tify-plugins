@@ -2,6 +2,7 @@
   "$language": "Deutsch",
   "← all examples": "← alle Beispiele",
   "Code example": "Codebeispiel",
+  "Color": "Farbe",
   "Documentation": "Dokumentation",
   "Dual": "Dual",
   "Flute": "Flöte",
@@ -15,6 +16,7 @@
   "Piano": "Klavier",
   "Play": "Abspielen",
   "Player unavailable: {error}": "Player nicht verfügbar: {error}",
+  "Regions": "Bereiche",
   "Rendered MusicXML notation, aligned onto the scan, with playback.": "Gerenderte MusicXML-Notation, ausgerichtet auf den Scan, mit Wiedergabe.",
   "Score": "Partitur",
   "Score panel": "Partiturbereich",
@@ -24,5 +26,6 @@
   "Synth": "Synth",
   "Tempo: {value}": "Tempo: {value}",
   "Track": "Spur",
-  "Track 2": "Spur 2"
+  "Track 2": "Spur 2",
+  "Transparency": "Transparenz"
 }
