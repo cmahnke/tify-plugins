@@ -44,10 +44,10 @@
   },
   "dependencies": {
     "@projektemacher/tify-plugin-core": "^0.1.0",
-    "opensheetmusicdisplay": "^2.1.2"
+    "opensheetmusicdisplay": "^2.2.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
     "linkedom": "^0.18.13"
   },
   "peerDependencies": {

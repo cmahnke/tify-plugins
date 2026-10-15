@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@projektemacher/tify-plugin-core": "^0.1.0",
-    "@projektemacher/hdr-canvas": "^0.3.1"
+    "@projektemacher/hdr-canvas": "^0.4.0"
   },
   "peerDependencies": {
     "tify": "0.36.2"
@@ -52,6 +52,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0"
+    "@playwright/test": "^1.64.1"
   }
 }
