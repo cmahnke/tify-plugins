@@ -125,7 +125,11 @@ const changed = packages.filter((pkg) =>
 // exits above).
 if (changed.length > 0) checkMetadata();
 
-const lines = [`matrix=${JSON.stringify(changed.map(({ dir, name }) => ({ dir, name })))}`];
+// `include` form: strategy.matrix must be a mapping, so a bare array would
+// fail workflow parsing ("A sequence was not expected").
+const lines = [
+  `matrix=${JSON.stringify({ include: changed.map(({ dir, name }) => ({ dir, name })) })}`,
+];
 lines.push(`any=${changed.length > 0 ? 'true' : 'false'}`);
 lines.push(`dirs=${changed.map((pkg) => pkg.dir).join(' ')}`);
 
