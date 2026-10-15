@@ -19,6 +19,7 @@
     "test:e2e": "playwright test",
     "docs": "node scripts/build-docs.mjs dist/docs",
     "build:pages": "npm run build && npm run docs",
+    "clean": "npm run clean --workspaces --if-present && rm -rf dist .tmp test-results playwright-report coverage *.tsbuildinfo",
     "lint": "eslint . && stylelint \"**/*.css\" && prettier . --check",
     "lint:fix": "eslint . --fix && stylelint \"**/*.css\" --fix && prettier . --write"
   },
