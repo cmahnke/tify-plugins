@@ -245,14 +245,25 @@ export async function imageOverlaysPlugin(
     opacityInput.step = '0.05';
     opacityInput.value = String(fillOpacity);
     opacityInput.setAttribute('aria-label', t('Fill opacity'));
+    // The raw value is a bare 0–1 float; speak it as a percentage instead.
+    const paintOpacityText = (): void => {
+      opacityInput.setAttribute(
+        'aria-valuetext',
+        `${Math.round(Number(opacityInput.value) * 100)}%`,
+      );
+    };
+    paintOpacityText();
     colorRow.append(opacityInput);
     opacityInput.addEventListener('input', () => {
       fillOpacity = Number(opacityInput.value);
+      paintOpacityText();
       restyle();
     });
     controls.append(layerLabel, frameLabel, colorRow);
     readout = document.createElement('p');
     readout.className = 'tify-plugin-note';
+    // Announce selection changes ("Selected: Gänseliesel") non-visually.
+    readout.setAttribute('role', 'status');
     panel.body.append(controls, readout);
     renderReadout();
   }
@@ -283,10 +294,14 @@ export async function imageOverlaysPlugin(
       element.type = 'button';
       element.className = 'tify-plugin-marker';
       element.textContent = `P${pages[0]}·${index + 1}`;
-      element.title = t('Demo marker {index} on page {page} (click to advance)', {
+      const title = t('Demo marker {index} on page {page} (click to advance)', {
         index: index + 1,
         page: pages[0],
       });
+      element.title = title;
+      // "P1·1" alone is meaningless to screen readers; the tooltip text
+      // doubles as the accessible name.
+      element.setAttribute('aria-label', title);
       element.addEventListener('click', advance);
       // The OSD canvas captures the pointer stream for drag detection, so a
       // DOM `click` never fires for pointer input on overlays — pair
@@ -343,6 +358,9 @@ export async function imageOverlaysPlugin(
       label.setAttribute('font-size', String(box.h * 0.8));
       label.setAttribute('textLength', String(box.w));
       label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+      // Halo width rides the viewBox (box.h), so it scales with the box;
+      // the halo itself comes from the shared style.css (paint-order).
+      label.setAttribute('stroke-width', String(box.h * 0.06));
       label.textContent = box.text;
       svg.append(label);
       element.append(svg);

@@ -285,6 +285,18 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* Visually hidden, still in the accessibility tree (link/caption suffixes). */
+.tify-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .tify-plugin-marker {
   background: #0b5fff;
   color: #fff;
@@ -309,21 +321,38 @@ body {
   height: 100%;
 }
 
+/* Halo behind the glyphs (paint-order): word text must stay legible over
+   arbitrary image content — the boxes' own tint is nearly transparent. */
 .tify-plugin-tei-word text {
   fill: currentcolor;
+  paint-order: stroke;
+  stroke: rgb(255 255 255 / 85%);
 }
 
 .tify-plugin-tei-word:hover {
   background: rgb(11 95 255 / 32%);
 }
 
-.tify-plugin-tei-word.is-selected {
-  outline: 2px solid rgb(11 95 255);
-}
-
 .tify-plugin-tei-word.no-frame,
 .tify-plugin-tei-word.no-frame:hover {
   outline: none;
+}
+
+/* Focus and selection must be distinguishable (WCAG 2.4.7/2.4.11): the
+   resting and selected states use a solid blue outline, keyboard focus
+   adds a white inner ring so the focus cursor is identifiable on any
+   image. :focus-visible also wins over the .no-frame (outline: none)
+   selection style. */
+.tify-plugin-tei-word:focus-visible,
+.tify-plugin-tei-word.no-frame:focus-visible {
+  outline: 2px solid rgb(11 95 255);
+  box-shadow:
+    inset 0 0 0 2px rgb(255 255 255 / 90%),
+    0 0 0 2px rgb(255 255 255 / 90%);
+}
+
+.tify-plugin-tei-word.is-selected {
+  outline: 2px solid rgb(11 95 255);
 }
 
 .tify-plugin-tei-word.is-hidden,

@@ -296,12 +296,16 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
 
   const table = document.createElement('table');
   const tbody = document.createElement('tbody');
-  table.append(tbody);
+  const caption = document.createElement('caption');
+  caption.className = 'tify-sr-only';
+  caption.textContent = t('C2PA checks per viewport tile');
+  table.append(caption, tbody);
   panel.body.append(table);
 
   const serviceLine = document.createElement('p');
   serviceLine.className = 'tify-plugin-service-line';
   serviceLine.textContent = t('Image service advertises C2PA: {value}', { value: t('unknown') });
+  serviceLine.setAttribute('role', 'status');
   panel.body.append(serviceLine);
 
   const updateServiceLine = async (): Promise<void> => {
@@ -335,6 +339,9 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
       link.target = '_blank';
       link.rel = 'noreferrer';
       link.textContent = tile.key;
+      // "L8 3,2" alone is meaningless out of context; name the link and
+      // announce that it opens a new tab.
+      link.setAttribute('aria-label', t('Tile {key} (opens in new tab)', { key: tile.key }));
       keyCell.append(link);
       const stateCell = document.createElement('td');
       const pill = document.createElement('span');

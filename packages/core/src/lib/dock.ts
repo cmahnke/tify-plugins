@@ -185,7 +185,7 @@ export function dockPanel(options: DockOptions): DockHandle | null {
     contentEl.hidden = !open;
     options.onToggle?.(open);
   };
-  const openPanel = (): void => {
+  const openPanel = (focus = false): void => {
     if (disposed || open) return;
     open = true;
     prevView = (tify.options?.view as string | null) ?? null;
@@ -196,6 +196,10 @@ export function dockPanel(options: DockOptions): DockHandle | null {
       internal = false;
     }
     paint();
+    // User-initiated opens (button click / Enter) move focus into the panel
+    // so keyboard and screen-reader users land in the revealed content —
+    // programmatic opens (autoOpen at init) must not steal focus.
+    if (focus) contentEl.focus({ preventScroll: false });
   };
   const closePanel = (restore: boolean): void => {
     if (disposed || !open) return;
@@ -212,9 +216,18 @@ export function dockPanel(options: DockOptions): DockHandle | null {
   };
   const onClick = (): void => {
     if (open) closePanel(true);
-    else openPanel();
+    else openPanel(true);
   };
   button.addEventListener('click', onClick);
+  // Escape inside the panel closes it and returns focus to the toggle
+  // button — the reverse of the button's aria-controls relationship.
+  const onKeydown = (event: KeyboardEvent): void => {
+    if (disposed || !open || event.key !== 'Escape') return;
+    event.stopPropagation();
+    closePanel(true);
+    button.focus();
+  };
+  contentEl.addEventListener('keydown', onKeydown);
   // Native view picked while ours is open: close silently (user's choice stands).
   const timer = window.setInterval(() => {
     if (disposed || internal || !open) return;
@@ -237,12 +250,17 @@ export function dockPanel(options: DockOptions): DockHandle | null {
     },
     setTitle(title: string) {
       button.title = title;
+      // Tooltip text is invisible to screen readers; mirror it as the
+      // description so the tint's meaning (ok/bad/neutral probe states)
+      // is available non-visually too.
+      button.setAttribute('aria-description', title);
     },
     destroy() {
       disposed = true;
       observer.disconnect();
       resizeObserver.disconnect();
       window.clearInterval(timer);
+      contentEl.removeEventListener('keydown', onKeydown);
       button.remove();
       const remaining = Math.max(0, Number(main.dataset.pluginDocks ?? 1) - 1);
       if (remaining === 0) {

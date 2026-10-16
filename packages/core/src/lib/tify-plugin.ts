@@ -85,6 +85,9 @@ export function createSidePanel(host: HTMLElement, title: string): SidePanel {
   heading.textContent = title;
   const status = document.createElement('p');
   status.className = 'tify-plugin-status';
+  // Live region: status changes ("Viewing page 2", "Loading…") are spoken
+  // while the panel is open (WCAG 4.1.3 Status Messages).
+  status.setAttribute('role', 'status');
   const body = document.createElement('div');
   body.className = 'tify-plugin-body';
   host.append(heading, status, body);

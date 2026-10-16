@@ -61,7 +61,9 @@ export async function sidePanelPlugin(tify: Tify, options: SidePanelOptions): Pr
           });
   };
 
-  // Manifest summary (best effort; panel works without it).
+  // Manifest summary (best effort; panel works without it). The canvas
+  // count doubles as the upper pagination bound (null while unknown).
+  let canvasCount: number | null = null;
   try {
     const url = tify.options?.manifestUrl as string | undefined;
     if (url) {
@@ -71,6 +73,7 @@ export async function sidePanelPlugin(tify: Tify, options: SidePanelOptions): Pr
         (manifest as any)?.items?.length ??
         (manifest as any)?.sequences?.[0]?.canvases?.length ??
         '?';
+      if (typeof canvases === 'number') canvasCount = canvases;
       const title = document.createElement('p');
       title.innerHTML = `<strong></strong> <span></span>`;
       (title.querySelector('strong') as HTMLElement).textContent = getManifestLabel(manifest);
@@ -82,29 +85,54 @@ export async function sidePanelPlugin(tify: Tify, options: SidePanelOptions): Pr
     // Panel stays useful without manifest metadata.
   }
 
-  const nav = document.createElement('p');
+  const nav = document.createElement('nav');
+  nav.className = 'tify-plugin-page-nav';
+  nav.setAttribute('aria-label', t('Document navigation'));
   const prev = document.createElement('button');
+  prev.type = 'button';
   prev.textContent = t('← Previous');
   prev.addEventListener('click', () => {
     const pages = getPages(tify).filter((p) => p > 0);
     if (pages.length > 0 && pages[0] > 1) tify.setPage(pages[0] - 1);
   });
   const next = document.createElement('button');
+  next.type = 'button';
   next.textContent = t('Next →');
   next.addEventListener('click', () => {
     const pages = getPages(tify).filter((p) => p > 0);
     if (pages.length > 0) tify.setPage(pages[0] + 1);
   });
   const thumbs = document.createElement('button');
+  thumbs.type = 'button';
   thumbs.textContent = t('Thumbnails');
+  // Toggle state for assistive tech; kept in sync below, since TIFY emits
+  // no view-change events (same polling pattern as the dock helper).
+  const paintThumbs = (): void => {
+    thumbs.setAttribute('aria-pressed', String(tify.options?.view === 'thumbnails'));
+  };
   thumbs.addEventListener('click', () => {
     tify.setView(tify.options?.view === 'thumbnails' ? null : 'thumbnails');
+    paintThumbs();
   });
   nav.append(prev, ' ', next, ' ', thumbs);
   panel.body.append(nav);
 
-  const unsubscribe = onPagesChange(tify, () => void render());
+  // Disable pagination at the bounds (silent no-ops otherwise). The upper
+  // bound comes from the manifest's canvas count; unknown while it loads,
+  // in which case Next stays enabled (the click handler no-ops anyway).
+  const paintNav = (): void => {
+    const pages = getPages(tify).filter((p) => p > 0);
+    prev.disabled = pages.length > 0 && pages[0] <= 1;
+    next.disabled = pages.length > 0 && canvasCount !== null && pages[0] >= canvasCount;
+  };
+  const unsubscribe = onPagesChange(tify, () => {
+    void render();
+    paintNav();
+    paintThumbs();
+  });
   await render();
+  paintNav();
+  paintThumbs();
 
   return {
     destroy() {

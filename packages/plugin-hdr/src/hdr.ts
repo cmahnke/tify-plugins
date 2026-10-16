@@ -98,6 +98,11 @@ function renderService(t: TranslateFn, host: HTMLElement, desc: ImageServiceDesc
     link.target = '_blank';
     link.rel = 'noreferrer';
     link.textContent = desc.serviceId;
+    // New-window cue: target="_blank" is invisible to screen readers.
+    const cue = document.createElement('span');
+    cue.className = 'tify-sr-only';
+    cue.textContent = ` ${t('(opens in new tab)')}`;
+    link.append(cue);
     td.append(link);
     row.append(th, td);
     tbody.append(row);

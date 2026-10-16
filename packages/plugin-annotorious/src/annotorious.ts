@@ -117,7 +117,13 @@ function highlight(entries: RowEntry[], id: string | null): void {
   for (const entry of entries) {
     const active = entry.parsed.id === id;
     entry.row?.classList.toggle('is-active', active);
-    if (active) entry.row?.scrollIntoView({ block: 'nearest' });
+    // The tint alone is visual; aria-current carries the row-canvas
+    // relationship to assistive tech.
+    if (entry.row) {
+      if (active) entry.row.setAttribute('aria-current', 'true');
+      else entry.row.removeAttribute('aria-current');
+      if (active) entry.row.scrollIntoView({ block: 'nearest' });
+    }
   }
 }
 
@@ -172,8 +178,11 @@ export async function annotoriousPlugin(
   let tbody: HTMLTableSectionElement | null = null;
   if (panel) {
     const table = document.createElement('table');
+    const caption = document.createElement('caption');
+    caption.className = 'tify-sr-only';
+    caption.textContent = t('Annotations on this page');
     tbody = document.createElement('tbody');
-    table.append(tbody);
+    table.append(caption, tbody);
     panel.body.append(table);
     if (!anno) {
       // Make the degradation visible (and testable).
