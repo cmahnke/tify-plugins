@@ -1,5 +1,6 @@
 {
   "$language": "Deutsch",
+  "(opens in new tab)": "(öffnet sich in einem neuen Tab)",
   "← all examples": "← alle Beispiele",
   "API version": "API-Version",
   "Canvas HDR: {value}": "HDR-Canvas: {value}",
@@ -23,7 +24,6 @@
   "Load manifest": "Manifest laden",
   "Needs an HDR display to be visible; SDR fallback otherwise.": "Zur Anzeige wird ein HDR-Display benötigt; sonst SDR-Fallback.",
   "no": "nein",
-  "(opens in new tab)": "(öffnet sich in einem neuen Tab)",
   "Profile": "Profil",
   "Service": "Dienst",
   "unknown": "unbekannt",

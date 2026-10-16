@@ -1,5 +1,6 @@
 import 'tify/dist/tify.css';
 import '@projektemacher/tify-plugin-core/style.css';
+import '@projektemacher/tify-plugin-musicxml/musicxml.css';
 import hljs from 'highlight.js/lib/core';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';

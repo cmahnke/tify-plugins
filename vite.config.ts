@@ -36,6 +36,10 @@ export default defineConfig(({ command }) => ({
               find: `${scope}/tify-plugin-core/style.css`,
               replacement: resolve(root, 'packages/core/style.css'),
             },
+            {
+              find: `${scope}/tify-plugin-musicxml/musicxml.css`,
+              replacement: resolve(root, 'packages/plugin-musicxml/src/musicxml.css'),
+            },
             ...workspaceAliases.map(([find, replacement]) => ({
               find,
               replacement: resolve(root, replacement),
