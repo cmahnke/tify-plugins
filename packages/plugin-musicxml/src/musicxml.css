@@ -74,20 +74,22 @@
 
 /* Alpha track: transparent -> the current RGB at full opacity, so the
    slider reads as an alpha control. The current position is marked by a
-   JS-positioned indicator dot (no dependence on native thumb styling). */
+   JS-positioned indicator dot (no dependence on native thumb styling).
+   The input itself is a 24px pointer target (WCAG 2.5.8); the visible
+   track is a centered 14px stripe. */
 .player-region-rgba input[type='range'] {
   appearance: none;
   width: 100%;
   margin: 0;
-  height: 14px;
-  background: linear-gradient(to right, transparent, var(--region-rgb-full));
-  border-radius: 7px;
+  height: 24px;
+  background: linear-gradient(to right, transparent, var(--region-rgb-full)) center / 100% 14px
+    no-repeat;
 }
 
 .player-region-alpha-wrap {
   position: relative;
   display: block;
-  height: 14px;
+  height: 24px;
 }
 
 .player-region-alpha-indicator {

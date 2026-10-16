@@ -445,6 +445,19 @@ export async function musicxmlPlugin(
     const stopBtn = makeTransportButton('stop', t('Stop'));
     transport.append(playBtn, pauseBtn, stopBtn);
 
+    // Transport state machine (the player exposes only isPlaying; paused is
+    // tracked locally). Disabled states replace silent no-op clicks so
+    // keyboard and screen-reader users see which actions exist (WCAG
+    // 2.1.1/4.1.2): stopped → only Play, playing → Pause/Stop,
+    // paused → Play (resume) and Stop.
+    let transportState: 'stopped' | 'playing' | 'paused' = 'stopped';
+    const paintTransport = (): void => {
+      playBtn.disabled = transportState === 'playing';
+      pauseBtn.disabled = transportState !== 'playing';
+      stopBtn.disabled = transportState === 'stopped';
+    };
+    paintTransport();
+
     const controls = document.createElement('div');
     controls.className = 'player-controls';
 
@@ -539,6 +552,8 @@ export async function musicxmlPlugin(
     if (regionSvg) {
       regionSvg.setAttribute('viewBox', `0 0 ${String(score.width)} ${String(score.height)}`);
       regionSvg.classList.add('staff-overlay', 'region-overlay');
+      // Purely decorative visualization, driven by the panel controls.
+      regionSvg.setAttribute('aria-hidden', 'true');
       for (const staff of staffEntries) {
         const [x0, y0, x1, y1] = staff.bbox;
         const rect = document.createElementNS(SVG_NS, 'rect');
@@ -620,6 +635,11 @@ export async function musicxmlPlugin(
       alphaInput.value = String(Math.round(regionAlpha * 100));
       alphaInput.setAttribute('aria-label', t('Opacity'));
       alphaInput.title = t('Opacity');
+      // Speak the value as a percentage, matching the visible readout.
+      const paintAlphaText = (): void => {
+        alphaInput.setAttribute('aria-valuetext', `${alphaInput.value}%`);
+      };
+      paintAlphaText();
       // JS-positioned current-position marker (independent of native range
       // thumb styling quirks) plus a numeric readout.
       const alphaIndicator = document.createElement('span');
@@ -651,6 +671,7 @@ export async function musicxmlPlugin(
       });
       alphaInput.addEventListener('input', () => {
         regionAlpha = (Number.parseInt(alphaInput.value, 10) || 0) / 100;
+        paintAlphaText();
         updateRgba();
       });
       // seed the indicator and track gradient with the initial color
@@ -688,6 +709,8 @@ export async function musicxmlPlugin(
     if (scoreSvg) {
       scoreSvg.setAttribute('viewBox', `0 0 ${String(score.width)} ${String(score.height)}`);
       scoreSvg.classList.add('staff-overlay', 'score-overlay');
+      // Visual mirror of the score (the panel carries the semantics).
+      scoreSvg.setAttribute('aria-hidden', 'true');
     }
 
     const overlaySvg: SVGSVGElement | null =
@@ -697,6 +720,8 @@ export async function musicxmlPlugin(
     if (overlaySvg) {
       overlaySvg.setAttribute('viewBox', `0 0 ${String(score.width)} ${String(score.height)}`);
       overlaySvg.classList.add('staff-overlay');
+      // Decorative playback highlights (playhead, note marker).
+      overlaySvg.setAttribute('aria-hidden', 'true');
     }
 
     const renderer = new OsmdRenderer();
@@ -953,6 +978,8 @@ export async function musicxmlPlugin(
       onEnd: () => {
         clearHighlights();
         renderer.clearHighlight();
+        transportState = 'stopped';
+        paintTransport();
       },
     });
 
@@ -970,16 +997,24 @@ export async function musicxmlPlugin(
       if (player.isPlaying) return;
       player.setTempo(parseInt(tempo.value, 10) || 120);
       player.play();
+      transportState = 'playing';
+      paintTransport();
     });
 
     pauseBtn.addEventListener('click', () => {
+      if (!player.isPlaying) return;
       player.pause();
+      transportState = 'paused';
+      paintTransport();
     });
 
     stopBtn.addEventListener('click', () => {
+      if (transportState === 'stopped') return;
       player.stop();
       clearHighlights();
       renderer.clearHighlight();
+      transportState = 'stopped';
+      paintTransport();
     });
 
     tempo.addEventListener('input', () => {

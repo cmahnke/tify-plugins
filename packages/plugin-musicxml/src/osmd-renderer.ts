@@ -491,6 +491,10 @@ export class OsmdRenderer {
     // offsetWidth) but must stay invisible; visibility (not display:none)
     // keeps offsetWidth non-zero offscreen.
     container.style.cssText = `position:fixed;left:-99999px;top:0;width:${String(width)}px;visibility:hidden;`;
+    // visibility:hidden already drops the render tree from the accessibility
+    // tree; aria-hidden makes that intent explicit (lyrics/text in the score
+    // must never reach screen readers).
+    container.setAttribute('aria-hidden', 'true');
     document.body.appendChild(container);
     this.container = container;
 
