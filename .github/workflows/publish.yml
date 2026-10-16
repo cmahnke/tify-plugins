@@ -98,7 +98,7 @@ jobs:
       # republished, or the version guard and registry disagreeing).
       - id: check_npm
         name: Check npmjs for this version
-        working-directory: packages/${{ matrix.dir }}
+        working-directory: ${{ matrix.dir }}
         run: |
           NAME=$(node -p "require('./package.json').name")
           VERSION=$(node -p "require('./package.json').version")
@@ -113,7 +113,7 @@ jobs:
           fi
       - name: Publish ${{ matrix.name }} to npmjs
         if: steps.check_npm.outputs.exists != 'true'
-        run: npm publish --workspace "packages/${{ matrix.dir }}" --provenance
+        run: npm publish --workspace "${{ matrix.dir }}" --provenance
       - name: Skip notice (already on npmjs)
         if: steps.check_npm.outputs.exists == 'true'
         run: echo "${{ matrix.name }} already on npmjs, skipping publish"
@@ -144,13 +144,13 @@ jobs:
         run: |
           node -e "
             const fs = require('fs');
-            const file = 'packages/${{ matrix.dir }}/package.json';
+            const file = '${{ matrix.dir }}/package.json';
             const p = JSON.parse(fs.readFileSync(file, 'utf8'));
             p.name = p.name.replace('@projektemacher/', '@cmahnke/');
             fs.writeFileSync(file, JSON.stringify(p, null, 2) + '\n');
           "
       - name: Publish ${{ matrix.name }} to GitHub Packages
         run: npm publish --access public
-        working-directory: packages/${{ matrix.dir }}
+        working-directory: ${{ matrix.dir }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
