@@ -4,3 +4,4 @@ export * from './note-map';
 export * from './audio';
 export * from './osmd-renderer';
 export * from './tei';
+export * from './icons';

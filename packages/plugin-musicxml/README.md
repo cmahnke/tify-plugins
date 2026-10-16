@@ -23,14 +23,20 @@ Options: `panelEl` (required, sidecar unless docked), `dock?: boolean | 'auto'`
 the manifest discovery below), `musicxml?: string` (absolute URL or raw XML —
 wins over the TEI-embedded score), `showScoreOverlay?` (default `true`),
 `showHighlights?` (default `true`), `regionOverlay?: { enabled?, color?,
-opacity? }` (default on, `#ff6400`, 25% fill).
+opacity? }` (default off, `#ff6400`, 25% alpha).
 
 The panel mirrors the
 [score-page viewer](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher)'s
-player: play/pause/stop, tempo, track and instrument selectors, a **Dual**
-toggle (on by default whenever the score carries two note streams), a **Score**
-toggle for the rendered overlay, and a **Regions** group (on/off, color,
-transparency) for the persistent staff-region overlay drawn from the TEI.
+player: a centered transport row (play/pause/stop with icons above their
+labels), the tempo, one track row per detected staff — each with a playing
+checkbox (all on by default, the page sounds as written) and its own
+instrument selector — and a **Score**
+toggle for the rendered overlay plus a **Regions** group (off by default) —
+an on/off switch plus one composite **rgba selector** (color picker with an
+integrated alpha slider; the slider's track runs transparent → the picked
+color) that colors fill and
+border of the persistent staff-region overlay alike. Every control carries
+a translated tooltip.
 
 ## Manifest format
 

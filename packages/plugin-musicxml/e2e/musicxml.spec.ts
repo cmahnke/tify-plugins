@@ -185,13 +185,13 @@ test('docks a score panel and renders the aligned score overlay', async ({ page 
   });
 });
 
-test('plays a single track: monophonic onsets on the grid', async ({ page }) => {
+test('plays a single staff: monophonic onsets on the grid', async ({ page }) => {
   await interceptOscillators(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await openPlayer(page);
-  // Dual mode is on by default for two-staff scores; switch it off so only
-  // one staff plays and onsets stay monophonic.
-  await page.locator('.player-dual').uncheck();
+  // All staves play by default; mute Staff 2 so only Staff 1 plays and
+  // onsets stay monophonic.
+  await page.locator('#player-staff-2').uncheck();
   await page.locator('.player-btn').first().click();
   await page.waitForTimeout(2200);
   const starts = await oscStarts(page);
@@ -212,8 +212,8 @@ test('playback highlights staff, note marker and playhead', async ({ page }) => 
   // NB: the *computed* visibility must be checked — a CSS visibility rule
   // would silently override the visibility ATTRIBUTE and hide the layers
   // without failing attribute assertions.
-  // In dual mode (on by default for two-staff scores) each playing staff has
-  // its own highlight set — assert on the first one.
+  // With all staves playing by default, each playing staff has its own
+  // highlight set — assert on the first one.
   for (const selector of ['.staff-current', '.note-marker', '.play-pos']) {
     const layer = page.locator(selector).first();
     await expect(layer).toHaveAttribute('visibility', 'visible', { timeout: 15_000 });
@@ -233,13 +233,10 @@ test('note marker is sized proportionally to the staff geometry', async ({ page 
   expect(r).toBeLessThanOrEqual(0.5 * 20);
 });
 
-test('dual mode plays two tracks simultaneously', async ({ page }) => {
+test('plays all staves simultaneously by default', async ({ page }) => {
   await interceptOscillators(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await openPlayer(page);
-  const dual = page.locator('.player-dual');
-  if ((await dual.count()) === 0) test.skip(true, 'single staff score has no dual mode');
-  await dual.check();
   await page.locator('.player-btn').first().click();
   await page.waitForTimeout(2500);
   const starts = await oscStarts(page);
@@ -262,7 +259,8 @@ test('instrument selection reschedules playback with the new waveform', async ({
   const first = await oscStarts(page);
   expect(first.length).toBeGreaterThanOrEqual(2);
   expect(first[0].w).toBe('triangle'); // piano default
-  await page.locator('.player-instrument-a').selectOption('synth');
+  // each staff has its own instrument select; Staff 1's row is first
+  await page.locator('.player-staff-row[data-staff="1"] .player-instrument').selectOption('synth');
   await page.waitForTimeout(1500);
   const second = await oscStarts(page);
   expect(second.length).toBeGreaterThan(first.length);
@@ -283,32 +281,65 @@ test('score toggle hides and restores the rendered overlay', async ({ page }) =>
   });
 });
 
-test('region overlay defaults to visible homr-style regions', async ({ page }) => {
+test('transport buttons are centered with icons above labels', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await openPlayer(page);
-  const region = page.locator('.region-overlay .staff-region').first();
-  await expect(region).toHaveAttribute('visibility', 'visible');
-  await expect(region).toHaveAttribute('fill', '#ff6400');
-  await expect(region).toHaveAttribute('fill-opacity', '0.25');
+  const transport = page.locator('.player-transport');
+  await expect(transport).toBeVisible();
+  const buttons = transport.locator('.player-btn');
+  await expect(buttons).toHaveCount(3);
+  // icon on top, text in its own line below
+  const first = buttons.first();
+  await expect(first.locator('svg.player-btn-icon')).toBeVisible();
+  await expect(first.locator('.player-btn-label')).toHaveText('Play');
+  // centered horizontally: symmetric outer margins across the row
+  const centered = await transport.evaluate((el) => {
+    const row = el.getBoundingClientRect();
+    const firstRect = el.querySelector('.player-btn')?.getBoundingClientRect();
+    const lastRect = el.querySelector('.player-btn:last-of-type')?.getBoundingClientRect();
+    if (!firstRect || !lastRect) return false;
+    return Math.abs(firstRect.left - row.left - (row.right - lastRect.right)) < 4;
+  });
+  expect(centered).toBe(true);
 });
 
-test('region overlay toggle, color and transparency controls apply live', async ({ page }) => {
+test('region overlay defaults to hidden regions', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await openPlayer(page);
   const region = page.locator('.region-overlay .staff-region').first();
-  await expect(region).toHaveAttribute('visibility', 'visible');
-  // Off.
-  await page.locator('#player-region-toggle').uncheck();
+  const toggle = page.locator('#player-region-toggle');
+  await expect(toggle).toBeVisible({ timeout: 30_000 });
+  await expect(toggle).not.toBeChecked();
   await expect(region).toHaveAttribute('visibility', 'hidden');
-  // On again.
-  await page.locator('#player-region-toggle').check();
+});
+
+test('region overlay toggle and rgba selector apply live', async ({ page }) => {
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  const region = page.locator('.region-overlay .staff-region').first();
+  const toggle = page.locator('#player-region-toggle');
+  await expect(toggle).toBeVisible({ timeout: 30_000 });
+  // the selector must be big enough to grab: a content-shrunken widget would
+  // render the alpha slider as an invisible sliver
+  const widgetBox = await page.locator('.player-region-rgba').boundingBox();
+  const sliderBox = await page.locator('.player-region-alpha').boundingBox();
+  expect(widgetBox?.width).toBeGreaterThanOrEqual(100);
+  expect(sliderBox?.width).toBeGreaterThanOrEqual(100);
+  expect(sliderBox?.height).toBeGreaterThanOrEqual(12);
+  // on: homr-orange at the default 0.25 alpha, fill and stroke alike
+  await toggle.check();
   await expect(region).toHaveAttribute('visibility', 'visible');
-  // Color.
+  await expect(region).toHaveAttribute('fill', 'rgba(255, 100, 0, 0.25)');
+  await expect(region).toHaveAttribute('stroke', 'rgba(255, 100, 0, 0.25)');
+  // off
+  await toggle.uncheck();
+  await expect(region).toHaveAttribute('visibility', 'hidden');
+  // on again, recolored and semi-opaque via the rgba selector
+  await toggle.check();
   await setInputValue(page, '.player-region-color', '#008000');
-  await expect(region).toHaveAttribute('fill', '#008000');
-  // Transparency: 50% transparency -> fill-opacity 0.5.
-  await setInputValue(page, '.player-region-transparency', '50');
-  await expect(region).toHaveAttribute('fill-opacity', '0.5');
+  await setInputValue(page, '.player-region-alpha', '50');
+  await expect(region).toHaveAttribute('fill', 'rgba(0, 128, 0, 0.5)');
+  await expect(region).toHaveAttribute('stroke', 'rgba(0, 128, 0, 0.5)');
 });
 
 test('region controls are localized (?lang=de)', async ({ page }) => {

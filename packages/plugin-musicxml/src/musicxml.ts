@@ -33,14 +33,15 @@ import { noteCoordOnStaff, type StaffEntry } from './note-map';
 import { parseMusicXML, type MusicTimeline, type ParsedNote } from './musicxml-timeline';
 import { OsmdRenderer, type ScorePiece } from './osmd-renderer';
 import { parseTei } from './tei';
+import { transportIconSvg, type TransportIcon } from './icons';
 import './musicxml.css';
 
 export interface RegionOverlayOptions {
-  /** Show the staff regions on the scan (default true). */
+  /** Show the staff regions on the scan (default false). */
   enabled?: boolean;
-  /** Region fill/border color, any CSS color (default '#ff6400'). */
+  /** Region fill/border color, hex '#rrggbb' (default '#ff6400'). */
   color?: string;
-  /** Region fill opacity 0–1 (default 0.25). */
+  /** Region fill/border alpha 0–1 (default 0.25); editable in the panel. */
   opacity?: number;
 }
 
@@ -75,6 +76,22 @@ const MUSICXML_FORMAT = 'application/vnd.recordare.musicxml+xml';
 const TEI_FORMAT = 'application/tei+xml';
 const DEFAULT_REGION_COLOR = '#ff6400';
 const DEFAULT_REGION_OPACITY = 0.25;
+
+/** '#rrggbb' (with or without '#') -> [r, g, b]; null when malformed. */
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = Number.parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function rgbToHex(rgb: [number, number, number]): string {
+  return `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function rgbaString(rgb: [number, number, number], alpha: number): string {
+  return `rgba(${rgb.join(', ')}, ${alpha})`;
+}
 
 let scoreMountSeq = 0;
 
@@ -407,23 +424,29 @@ export async function musicxmlPlugin(
     const staffEntries = score.staves;
     const regionOpts = options.regionOverlay ?? {};
 
+    // Transport buttons: icon on top, label below, centered as a row. The
+    // tempo/track/instrument controls live in a second row beneath.
+    const transport = document.createElement('div');
+    transport.className = 'player-controls player-transport';
+
+    const makeTransportButton = (icon: TransportIcon, label: string): HTMLButtonElement => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'player-btn';
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'player-btn-label';
+      labelSpan.textContent = label;
+      btn.append(transportIconSvg(document, icon), labelSpan);
+      return btn;
+    };
+
+    const playBtn = makeTransportButton('play', t('Play'));
+    const pauseBtn = makeTransportButton('pause', t('Pause'));
+    const stopBtn = makeTransportButton('stop', t('Stop'));
+    transport.append(playBtn, pauseBtn, stopBtn);
+
     const controls = document.createElement('div');
     controls.className = 'player-controls';
-
-    const playBtn = document.createElement('button');
-    playBtn.type = 'button';
-    playBtn.className = 'player-btn';
-    playBtn.textContent = t('Play');
-
-    const pauseBtn = document.createElement('button');
-    pauseBtn.type = 'button';
-    pauseBtn.className = 'player-btn';
-    pauseBtn.textContent = t('Pause');
-
-    const stopBtn = document.createElement('button');
-    stopBtn.type = 'button';
-    stopBtn.className = 'player-btn';
-    stopBtn.textContent = t('Stop');
 
     const tempoLabel = document.createElement('span');
     tempoLabel.className = 'player-tempo';
@@ -433,43 +456,26 @@ export async function musicxmlPlugin(
     tempo.min = '60';
     tempo.max = '180';
     tempo.value = '120';
+    tempo.title = t('Playback tempo');
+    tempo.setAttribute('aria-label', t('Playback tempo'));
     const paintTempo = (): void => {
       tempoLabel.textContent = t('Tempo: {value}', { value: tempo.value });
     };
     paintTempo();
-    controls.append(playBtn, pauseBtn, stopBtn, tempoLabel, tempo);
+    controls.append(tempoLabel, tempo);
 
-    // A page score may carry several staves (e.g. a grand staff with two
-    // voices); like the score-page viewer, dual mode plays two staves at
-    // once, each with its own instrument, and is on by default whenever the
-    // score carries two note streams.
+    // One row per staff found in the score: a playing checkbox (all on by
+    // default — the page sounds as written) plus that staff's own
+    // instrument. The audio engine schedules any number of tracks; the
+    // OSMD cursor follows the lowest-numbered playing staff.
     const presentStaffs = [...new Set(timeline.notes.map((n) => n.staff))].sort((a, b) => a - b);
-    let trackA = presentStaffs[0] ?? 1;
-    let trackB = presentStaffs[1] ?? trackA;
-    let instrumentA: Instrument = 'piano';
-    let instrumentB: Instrument = 'piano';
-    let dual = presentStaffs.length > 1;
+    const selectedStaves = new Set<number>(presentStaffs);
+    const staffInstruments = new Map<number, Instrument>();
+    const primaryStaff = (): number => [...selectedStaves].sort((a, b) => a - b)[0] ?? 1;
 
-    const trackLabel = document.createElement('span');
-    trackLabel.className = 'player-tempo';
-    trackLabel.textContent = t('Track');
-
-    const makeStaffSelect = (initial: number): HTMLSelectElement => {
+    const makeInstrumentSelect = (): HTMLSelectElement => {
       const select = document.createElement('select');
-      select.className = 'player-track';
-      for (const s of presentStaffs) {
-        const opt = document.createElement('option');
-        opt.value = String(s);
-        opt.textContent = t('Staff {n}', { n: s });
-        select.appendChild(opt);
-      }
-      select.value = String(initial);
-      return select;
-    };
-
-    const makeInstrumentSelect = (className: string): HTMLSelectElement => {
-      const select = document.createElement('select');
-      select.className = `player-instrument ${className}`;
+      select.className = 'player-instrument';
       // Static literal keys so the i18n coverage check sees every string.
       const labels: Array<[Instrument, string]> = [
         ['piano', t('Piano')],
@@ -487,57 +493,45 @@ export async function musicxmlPlugin(
       return select;
     };
 
-    const trackSelectA = makeStaffSelect(trackA);
-    const instrumentSelectA = makeInstrumentSelect('player-instrument-a');
-    controls.append(trackLabel, trackSelectA, instrumentSelectA);
-
-    let dualBox: HTMLInputElement | null = null;
-    let trackSelectB: HTMLSelectElement | null = null;
-    let instrumentSelectB: HTMLSelectElement | null = null;
-    if (presentStaffs.length > 1) {
-      dualBox = document.createElement('input');
-      dualBox.type = 'checkbox';
-      dualBox.className = 'player-dual';
-      dualBox.id = 'player-dual-toggle';
-      dualBox.checked = dual;
-      const dualLabel = document.createElement('label');
-      dualLabel.className = 'player-tempo';
-      dualLabel.htmlFor = 'player-dual-toggle';
-      dualLabel.textContent = t('Dual');
-      const trackBLabel = document.createElement('span');
-      trackBLabel.className = 'player-tempo';
-      trackBLabel.textContent = t('Track 2');
-      trackSelectB = makeStaffSelect(trackB);
-      // NB: not 'player-track' — that class must stay unique for track A
-      trackSelectB.className = 'player-track2';
-      instrumentSelectB = makeInstrumentSelect('player-instrument-b');
-      const trackBWrap = document.createElement('span');
-      trackBWrap.className = 'player-track-b';
-      trackBWrap.append(trackBLabel, trackSelectB, instrumentSelectB);
-      controls.append(dualLabel, dualBox, trackBWrap);
-    } else {
-      controls.classList.add('single-track');
+    const staffRows: HTMLDivElement[] = [];
+    for (const staff of presentStaffs) {
+      const row = document.createElement('div');
+      row.className = 'player-staff-row';
+      row.dataset.staff = String(staff);
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.className = 'player-staff-toggle';
+      box.id = `player-staff-${String(staff)}`;
+      box.checked = true;
+      box.title = t('Play this staff');
+      box.setAttribute('aria-label', t('Play this staff'));
+      const label = document.createElement('label');
+      label.className = 'player-tempo';
+      label.htmlFor = box.id;
+      label.textContent = t('Staff {n}', { n: staff });
+      const instrument = makeInstrumentSelect();
+      instrument.title = t('Instrument for this staff');
+      instrument.setAttribute('aria-label', t('Instrument for this staff'));
+      instrument.addEventListener('change', () => {
+        staffInstruments.set(staff, instrument.value as Instrument);
+        applyTracks();
+      });
+      box.addEventListener('change', () => {
+        if (box.checked) selectedStaves.add(staff);
+        else selectedStaves.delete(staff);
+        applyTracks();
+      });
+      row.append(box, label, instrument);
+      staffRows.push(row);
     }
 
-    // Toggle for the rendered score overlay (OpenSheetMusicDisplay mapped
-    // onto the scan). The OSMD render itself keeps running while anything
-    // consumes its alignment data; the overlay is only mounted while on.
-    const scoreBox = document.createElement('input');
-    scoreBox.type = 'checkbox';
-    scoreBox.className = 'player-score';
-    scoreBox.id = 'player-score-toggle';
-    scoreBox.checked = showScoreOverlay;
-    const scoreLabel = document.createElement('label');
-    scoreLabel.className = 'player-tempo';
-    scoreLabel.htmlFor = 'player-score-toggle';
-    scoreLabel.textContent = t('Score');
-    controls.append(scoreLabel, scoreBox);
-
     // Region overlay state: one persistent rect per detected staff region,
-    // styled live by the panel controls (added to the DOM below).
-    let showRegions = regionOpts.enabled ?? true;
-    let regionColor = regionOpts.color ?? DEFAULT_REGION_COLOR;
-    let regionOpacity = regionOpts.opacity ?? DEFAULT_REGION_OPACITY;
+    // filled and outlined with a configurable rgba color, styled live by the
+    // panel's rgba selector (added to the DOM below). Off by default.
+    let showRegions = regionOpts.enabled ?? false;
+    let regionRgb = hexToRgb(regionOpts.color ?? DEFAULT_REGION_COLOR) ?? [255, 100, 0];
+    let regionAlpha = regionOpts.opacity ?? DEFAULT_REGION_OPACITY;
+    let regionRgba = rgbaString(regionRgb, regionAlpha);
     const regionSvg =
       staffEntries.length > 0 && score.width > 0 && score.height > 0
         ? document.createElementNS(SVG_NS, 'svg')
@@ -553,10 +547,8 @@ export async function musicxmlPlugin(
         rect.setAttribute('y', String(y0));
         rect.setAttribute('width', String(Math.max(0, x1 - x0)));
         rect.setAttribute('height', String(Math.max(0, y1 - y0)));
-        rect.setAttribute('fill', regionColor);
-        rect.setAttribute('fill-opacity', String(regionOpacity));
-        rect.setAttribute('stroke', regionColor);
-        rect.setAttribute('stroke-opacity', '0.9');
+        rect.setAttribute('fill', regionRgba);
+        rect.setAttribute('stroke', regionRgba);
         rect.setAttribute('stroke-width', '3');
         regionSvg.appendChild(rect);
       }
@@ -564,9 +556,8 @@ export async function musicxmlPlugin(
     const applyRegionStyle = (): void => {
       if (!regionSvg) return;
       for (const rect of Array.from(regionSvg.querySelectorAll('rect'))) {
-        rect.setAttribute('fill', regionColor);
-        rect.setAttribute('fill-opacity', String(regionOpacity));
-        rect.setAttribute('stroke', regionColor);
+        rect.setAttribute('fill', regionRgba);
+        rect.setAttribute('stroke', regionRgba);
       }
     };
     const applyRegionVisibility = (): void => {
@@ -577,12 +568,27 @@ export async function musicxmlPlugin(
     };
 
     let regionBox: HTMLInputElement | null = null;
-    let regionControls: HTMLDivElement | null = null;
+    let togglesRow: HTMLDivElement | null = null;
     if (regionSvg) {
-      // Region overlay controls (on/off, color, transparency) — the same
-      // controls as the score-page viewer's player panel.
-      regionControls = document.createElement('div');
-      regionControls.className = 'player-controls region-controls';
+      // Toggles row: Score + Regions switches plus the composite rgba
+      // selector (native color picker for the RGB part with an integrated
+      // alpha slider), centered like the transport row.
+      togglesRow = document.createElement('div');
+      togglesRow.className = 'player-controls region-controls';
+
+      const scoreBox = document.createElement('input');
+      scoreBox.type = 'checkbox';
+      scoreBox.className = 'player-score';
+      scoreBox.id = 'player-score-toggle';
+      scoreBox.checked = showScoreOverlay;
+      scoreBox.title = t('Show the rendered score on the scan');
+      scoreBox.setAttribute('aria-label', t('Show the rendered score on the scan'));
+      const scoreLabel = document.createElement('label');
+      scoreLabel.className = 'player-tempo';
+      scoreLabel.htmlFor = 'player-score-toggle';
+      scoreLabel.textContent = t('Score');
+      togglesRow.append(scoreLabel, scoreBox);
+
       const regionLabel = document.createElement('label');
       regionLabel.className = 'player-tempo';
       regionLabel.htmlFor = 'player-region-toggle';
@@ -592,41 +598,82 @@ export async function musicxmlPlugin(
       regionBox.className = 'player-regions';
       regionBox.id = 'player-region-toggle';
       regionBox.checked = showRegions;
-      const colorLabel = document.createElement('span');
-      colorLabel.className = 'player-tempo';
-      colorLabel.textContent = t('Color');
+      regionBox.title = t('Show the staff regions on the scan');
+      regionBox.setAttribute('aria-label', t('Show the staff regions on the scan'));
+
+      const rgba = document.createElement('span');
+      rgba.className = 'player-region-rgba';
+      rgba.title = t('Region color and opacity');
       const colorInput = document.createElement('input');
       colorInput.type = 'color';
       colorInput.className = 'player-region-color';
-      colorInput.value = regionColor;
-      const transLabel = document.createElement('span');
-      transLabel.className = 'player-tempo';
-      transLabel.textContent = t('Transparency');
-      const transInput = document.createElement('input');
-      transInput.type = 'range';
-      transInput.className = 'player-region-transparency';
-      transInput.min = '0';
-      transInput.max = '100';
-      transInput.step = '5';
-      transInput.value = String(Math.round((1 - regionOpacity) * 100));
-      regionControls.append(regionLabel, regionBox, colorLabel, colorInput, transLabel, transInput);
+      colorInput.value = rgbToHex(regionRgb);
+      colorInput.setAttribute('aria-label', t('Region color and opacity'));
+      const alphaWrap = document.createElement('span');
+      alphaWrap.className = 'player-region-alpha-wrap';
+      const alphaInput = document.createElement('input');
+      alphaInput.type = 'range';
+      alphaInput.className = 'player-region-alpha';
+      alphaInput.min = '0';
+      alphaInput.max = '100';
+      alphaInput.step = '5';
+      alphaInput.value = String(Math.round(regionAlpha * 100));
+      alphaInput.setAttribute('aria-label', t('Opacity'));
+      alphaInput.title = t('Opacity');
+      // JS-positioned current-position marker (independent of native range
+      // thumb styling quirks) plus a numeric readout.
+      const alphaIndicator = document.createElement('span');
+      alphaIndicator.className = 'player-region-alpha-indicator';
+      const alphaValue = document.createElement('span');
+      alphaValue.className = 'player-region-alpha-value';
+      alphaWrap.append(alphaInput, alphaIndicator);
+      rgba.append(colorInput, alphaWrap, alphaValue);
+      togglesRow.append(regionLabel, regionBox, rgba);
+
+      const paintAlpha = (): void => {
+        const pct = Math.round(regionAlpha * 100);
+        rgba.style.setProperty('--region-alpha-pos', `${String(pct)}%`);
+        rgba.style.setProperty('--region-rgb-full', `rgb(${regionRgb.join(', ')})`);
+        alphaValue.textContent = `${String(pct)}%`;
+      };
+      const updateRgba = (): void => {
+        regionRgba = rgbaString(regionRgb, regionAlpha);
+        paintAlpha();
+        applyRegionStyle();
+      };
       regionBox.addEventListener('change', () => {
-        showRegions = regionBox?.checked ?? true;
+        showRegions = regionBox?.checked ?? false;
         applyRegionVisibility();
       });
       colorInput.addEventListener('input', () => {
-        regionColor = colorInput.value;
-        applyRegionStyle();
+        regionRgb = hexToRgb(colorInput.value) ?? regionRgb;
+        updateRgba();
       });
-      transInput.addEventListener('input', () => {
-        regionOpacity = 1 - (Number.parseInt(transInput.value, 10) || 0) / 100;
-        applyRegionStyle();
+      alphaInput.addEventListener('input', () => {
+        regionAlpha = (Number.parseInt(alphaInput.value, 10) || 0) / 100;
+        updateRgba();
       });
+      // seed the indicator and track gradient with the initial color
+      updateRgba();
       applyRegionVisibility();
+
+      scoreBox.addEventListener('change', () => {
+        showScore = scoreBox.checked;
+        if (showScore) {
+          ensureRendered();
+          updateScoreOverlay();
+        } else if (scoreOverlayAdded && removeScoreOverlay) {
+          removeScoreOverlay();
+          removeScoreOverlay = null;
+          scoreOverlayAdded = false;
+        }
+      });
     }
 
+    panel.body.append(transport);
     panel.body.append(controls);
-    if (regionControls) panel.body.append(regionControls);
+    for (const row of staffRows) panel.body.append(row);
+    if (togglesRow) panel.body.append(togglesRow);
 
     // The rendered score lives in a page-pixel-space SVG overlay, so
     // OpenSeadragon scales it with pan/zoom. After OSMD renders, every system
@@ -710,38 +757,24 @@ export async function musicxmlPlugin(
     };
     mountOverlays();
 
-    scoreBox.addEventListener('change', () => {
-      showScore = scoreBox.checked;
-      if (showScore) {
-        ensureRendered();
-        updateScoreOverlay();
-      } else if (scoreOverlayAdded && removeScoreOverlay) {
-        removeScoreOverlay();
-        removeScoreOverlay = null;
-        scoreOverlayAdded = false;
-      }
-    });
-
     const player = new MusicPlayer(timeline);
 
     const trackConfigs = (): TrackConfig[] =>
-      dual
-        ? [
-            { staff: trackA, instrument: instrumentA },
-            { staff: trackB, instrument: instrumentB },
-          ]
-        : [{ staff: trackA, instrument: instrumentA }];
+      [...selectedStaves]
+        .sort((a, b) => a - b)
+        .map((staff) => ({ staff, instrument: staffInstruments.get(staff) ?? 'piano' }));
     player.setTracks(trackConfigs());
 
     // Maps an index into timeline.notes to its position within the primary
-    // track (-1 for other staves), so the score cursor follows the primary
-    // track only.
+    // track (the lowest-numbered playing staff; -1 for other staves), so the
+    // score cursor follows the primary track only.
     let trackIndex: Int32Array = new Int32Array(0);
     function rebuildTrackIndex(): void {
+      const primary = primaryStaff();
       trackIndex = new Int32Array(timeline.notes.length);
       let k = 0;
       for (let i = 0; i < timeline.notes.length; i++) {
-        trackIndex[i] = timeline.notes[i].staff === trackA ? k++ : -1;
+        trackIndex[i] = timeline.notes[i].staff === primary ? k++ : -1;
       }
     }
     rebuildTrackIndex();
@@ -906,15 +939,14 @@ export async function musicxmlPlugin(
     player.setCallbacks({
       onNote: (note, index) => {
         if (!showHighlights) return;
-        // Each playing track drives its own highlight set, so dual mode shows
-        // the current position on both staves; notes of staves that are not
-        // playing are ignored. OSMD's single cursor still follows the primary
-        // track only.
-        const audible = note.staff === trackA || (dual && note.staff === trackB);
-        if (!audible) return;
-        if (note.staff === trackA) {
+        // Each playing staff drives its own highlight set, so multi-track
+        // playback shows the current position on every playing staff; notes
+        // of muted staves are ignored. OSMD's single cursor still follows
+        // the primary (lowest-numbered playing) staff only.
+        if (!selectedStaves.has(note.staff)) return;
+        if (note.staff === primaryStaff()) {
           // Advance the OSMD cursor first so the marker reads the fresh position.
-          renderer.highlightNote(osmdStepsBefore(note, trackA));
+          renderer.highlightNote(osmdStepsBefore(note, primaryStaff()));
         }
         highlightNote(index);
       },
@@ -954,35 +986,6 @@ export async function musicxmlPlugin(
       player.setTempo(parseInt(tempo.value, 10) || 120);
       paintTempo();
     });
-
-    trackSelectA.addEventListener('change', () => {
-      trackA = parseInt(trackSelectA.value, 10) || trackA;
-      if (trackB === trackA) {
-        trackB = presentStaffs.find((s) => s !== trackA) ?? trackB;
-        if (trackSelectB) trackSelectB.value = String(trackB);
-      }
-      applyTracks();
-    });
-
-    instrumentSelectA.addEventListener('change', () => {
-      instrumentA = instrumentSelectA.value as Instrument;
-      applyTracks();
-    });
-
-    if (dualBox && trackSelectB && instrumentSelectB) {
-      dualBox.addEventListener('change', () => {
-        dual = dualBox.checked;
-        applyTracks();
-      });
-      trackSelectB.addEventListener('change', () => {
-        trackB = parseInt(trackSelectB.value, 10) || trackB;
-        applyTracks();
-      });
-      instrumentSelectB.addEventListener('change', () => {
-        instrumentB = instrumentSelectB.value as Instrument;
-        applyTracks();
-      });
-    }
 
     panel.status.textContent = '';
     teardown = () => {
