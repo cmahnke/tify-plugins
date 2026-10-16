@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-image-overlays",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "OpenSeadragon overlay markers plugin for the TIFY IIIF viewer",
   "type": "module",
   "license": "AGPL-3.0-or-later",
@@ -40,7 +40,7 @@
     "lint": "eslint . && prettier --check src example e2e scripts package.json README.md"
   },
   "dependencies": {
-    "@projektemacher/tify-plugin-core": "^0.1.0"
+    "@projektemacher/tify-plugin-core": "^0.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

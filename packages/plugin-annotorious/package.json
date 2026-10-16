@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-annotorious",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Display-only Annotorious annotations plugin for the TIFY IIIF viewer",
   "type": "module",
   "license": "AGPL-3.0-or-later",
@@ -40,7 +40,7 @@
     "lint": "eslint . && prettier --check src example e2e package.json README.md"
   },
   "dependencies": {
-    "@projektemacher/tify-plugin-core": "^0.1.0",
+    "@projektemacher/tify-plugin-core": "^0.2.0",
     "@annotorious/openseadragon": "~3.8.10"
   },
   "peerDependencies": {

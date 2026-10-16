@@ -15,8 +15,8 @@ authors:
     email: mail@christianmahnke.de
     orcid: 'https://orcid.org/0009-0003-1361-4159'
 type: software
-version: 0.1.0
-date-released: '2026-10-13'
+version: 0.2.0
+date-released: '2026-10-16'
 license: AGPL-3.0-or-later
 repository-code: 'https://github.com/cmahnke/tify-plugins'
 url: 'https://github.com/cmahnke/tify-plugins'

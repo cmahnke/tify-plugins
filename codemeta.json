@@ -3,9 +3,9 @@
   "@type": "SoftwareSourceCode",
   "name": "tify-plugins",
   "description": "Plugins for TIFY (tify@0.36.2), the slim IIIF document viewer, published as individual npm modules under @projektemacher/tify-plugin-*: a custom metadata side panel, OpenSeadragon overlays synced to pages (TEI word boxes or demo markers), HDR canvas status, per-tile C2PA provenance, display-only Annotorious annotations, and rendered MusicXML scores with playback. All panels dock into the TIFY viewer chrome.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "dateCreated": "2026-06-02",
-  "dateModified": "2026-10-13",
+  "dateModified": "2026-10-16",
   "datePublished": "2026-10-13",
   "license": "https://spdx.org/licenses/AGPL-3.0-or-later",
   "author": {
