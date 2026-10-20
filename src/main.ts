@@ -1,7 +1,8 @@
 // Catalog landing page: example cards with descriptions and a live EN/DE
 // language toggle. The toggle writes ?lang= to the URL (shareable) and
 // re-applies the translations in place.
-import '@projektemacher/tify-plugin-core/style.css';
+import '@projektemacher/tify-plugin-core/demo.css';
+import './catalog.css';
 import {
   applyStaticTranslations,
   createTranslator,

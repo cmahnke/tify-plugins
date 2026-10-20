@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Shared core for TIFY viewer plugins: plugin contract, i18n, IIIF helpers, dock-in-viewer, styles",
   "type": "module",
   "license": "AGPL-3.0-or-later",
@@ -21,14 +21,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./style.css": "./style.css"
+    "./style.css": "./style.css",
+    "./demo.css": "./demo.css"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
-    "style.css"
+    "style.css",
+    "demo.css"
   ],
   "scripts": {
     "build": "vite build",
@@ -36,7 +38,7 @@
     "typecheck": "tsc --noEmit",
     "test:i18n": "node ../../scripts/check-i18n.js .",
     "test:e2e": "playwright test",
-    "lint": "eslint . && stylelint \"style.css\" && prettier --check src example e2e package.json README.md style.css"
+    "lint": "eslint . && stylelint \"style.css\" \"demo.css\" && prettier --check src example e2e package.json README.md style.css demo.css"
   },
   "peerDependencies": {
     "tify": "0.36.2"

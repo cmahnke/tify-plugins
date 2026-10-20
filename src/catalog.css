@@ -1,0 +1,94 @@
+/* Catalog landing page (root index.html): centered column, header with
+   language switcher, plugin example cards, footer. Page resets/globals live
+   in @projektemacher/tify-plugin-core/demo.css. */
+
+.catalog {
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+/* Catalog header: title + tagline + language switcher */
+.catalog-header {
+  display: flex;
+  gap: 1rem;
+  align-items: start;
+  justify-content: space-between;
+  margin-bottom: var(--gap);
+}
+
+.catalog-header h1 {
+  margin: 0 0 0.35rem;
+}
+
+.catalog-header p {
+  margin: 0;
+  max-width: 42rem;
+  opacity: 0.9;
+}
+
+.lang-switch {
+  display: flex;
+  flex-shrink: 0;
+  border: 1px solid #8883;
+  border-radius: 0.4rem;
+  overflow: hidden;
+}
+
+.lang-btn {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.7rem;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.lang-btn[aria-pressed='true'] {
+  background: light-dark(#06b, #4c9aff);
+  color: #fff;
+}
+
+/* Example cards grid */
+.cards {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--gap);
+  padding: 0;
+  margin: 0 0 var(--gap);
+}
+
+.card a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  height: 100%;
+  padding: 0.9rem;
+  border: 1px solid #8883;
+  border-radius: 0.6rem;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.card a:hover {
+  border-color: light-dark(#06b, #4c9aff);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: light-dark(#06b, #4c9aff);
+}
+
+.card p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  opacity: 0.85;
+}
+
+.catalog-footer {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}

@@ -1,140 +1,24 @@
-:root {
-  color-scheme: light dark;
-
-  --gap: 1rem;
-}
-
-* {
+/* Scoped box-sizing: panels must lay out identically inside TIFY's DOM
+   (where .tify * sets border-box) and beside it on consumer pages. */
+.tify-plugin-panel,
+.tify-plugin-panel *,
+.tify-plugin-dock,
+.tify-plugin-dock *,
+.tify-plugin-trust-form,
+.tify-plugin-trust-form *,
+.tify-plugin-controls,
+.tify-plugin-controls * {
   box-sizing: border-box;
 }
 
-body {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
-  margin: 0;
-  padding: 1rem;
-}
-
-.catalog {
-  max-width: 60rem;
-  margin: 0 auto;
-}
-
-/* Catalog header: title + tagline + language switcher */
-.catalog-header {
-  display: flex;
-  gap: 1rem;
-  align-items: start;
-  justify-content: space-between;
-  margin-bottom: var(--gap);
-}
-
-.catalog-header h1 {
-  margin: 0 0 0.35rem;
-}
-
-.catalog-header p {
-  margin: 0;
-  max-width: 42rem;
-  opacity: 0.9;
-}
-
-.lang-switch {
-  display: flex;
-  flex-shrink: 0;
-  border: 1px solid #8883;
-  border-radius: 0.4rem;
-  overflow: hidden;
-}
-
-.lang-btn {
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.7rem;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.lang-btn[aria-pressed='true'] {
-  background: light-dark(#06b, #4c9aff);
-  color: #fff;
-}
-
-/* Example cards grid */
-.cards {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-  gap: var(--gap);
-  padding: 0;
-  margin: 0 0 var(--gap);
-}
-
-.card a {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  height: 100%;
-  padding: 0.9rem;
-  border: 1px solid #8883;
-  border-radius: 0.6rem;
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s;
-}
-
-.card a:hover {
-  border-color: light-dark(#06b, #4c9aff);
-}
-
-.card h2 {
-  margin: 0;
-  font-size: 1rem;
-  color: light-dark(#06b, #4c9aff);
-}
-
-.card p {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.45;
-  opacity: 0.85;
-}
-
-.catalog-footer {
-  font-size: 0.8rem;
-  opacity: 0.8;
-}
-
-/* Example chrome */
-
-.example header.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: var(--gap);
-}
-
-.tify-plugin-trust-form input,
-.example header.controls input[type='url'],
-.example header.controls input[type='text'] {
+.tify-plugin-trust-form input {
   flex: 1 1 24rem;
   min-width: 0;
   padding: 0.4rem 0.6rem;
 }
 
-.tify-plugin-trust-form button,
-.example header.controls button {
+.tify-plugin-trust-form button {
   padding: 0.4rem 0.8rem;
-}
-
-.example header.controls select {
-  padding: 0.4rem 0.6rem;
-  max-width: 100%;
 }
 
 .tify-plugin-note {
@@ -156,55 +40,6 @@ body {
   flex-direction: column;
   gap: 0.2rem;
   font-size: 0.85rem;
-}
-
-.example .layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
-  gap: var(--gap);
-  align-items: start;
-  position: relative;
-}
-
-@media (width <= 60rem) {
-  .example .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Code example below the viewer */
-.code-example {
-  margin-top: var(--gap);
-  border: 1px solid #8883;
-  border-radius: 0.4rem;
-}
-
-.code-example summary {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.code-example pre {
-  margin: 0;
-  padding: 0.8rem;
-  overflow: auto;
-  font-size: 0.8rem;
-  line-height: 1.45;
-}
-
-.code-links {
-  margin: 0;
-  padding: 0.4rem 0.8rem;
-  border-top: 1px solid #8883;
-  font-size: 0.85rem;
-}
-
-.tify-frame {
-  height: 70vh;
-  min-height: 24rem;
-  border: 1px solid #8883;
 }
 
 .tify-plugin-panel {
@@ -499,57 +334,3 @@ body {
 .tify-plugin-dock-btn.is-bad {
   --tify-plugin-badge-tint: light-dark(#b42318, #f87171);
 }
-
-/* Code example below the viewer (after .tify-plugin-panel code so
-   specificity stays descending) */
-.code-example pre code {
-  background: none;
-  padding: 0;
-}
-
-/* Syntax highlighting (highlight.js) for the static code examples.
-   Transparent background blends with the surrounding pre; token colors
-   follow the repo palette and adapt to light/dark via light-dark().
-   Class names are highlight.js's own (underscores), not ours. */
-/* stylelint-disable selector-class-pattern */
-.code-example .hljs-keyword {
-  color: light-dark(#06b, #4c9aff);
-}
-
-.code-example .hljs-string,
-.code-example .hljs-regexp {
-  color: light-dark(#1a7f37, #4ade80);
-}
-
-.code-example .hljs-number {
-  color: light-dark(#0550ae, #79c0ff);
-}
-
-.code-example .hljs-title,
-.code-example .hljs-title.class_,
-.code-example .hljs-title.function_ {
-  color: light-dark(#0b5fff, #7aa8ff);
-}
-
-.code-example .hljs-built_in,
-.code-example .hljs-literal {
-  color: light-dark(#8250df, #d2a8ff);
-}
-
-.code-example .hljs-attr {
-  color: light-dark(#0550ae, #79c0ff);
-}
-
-.code-example .hljs-comment {
-  color: light-dark(#59636e, #9198a1);
-  font-style: italic;
-}
-
-.code-example .hljs-tag {
-  color: light-dark(#59636e, #9198a1);
-}
-
-.code-example .hljs-name {
-  color: light-dark(#06b, #4c9aff);
-}
-/* stylelint-enable selector-class-pattern */

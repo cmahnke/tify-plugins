@@ -37,6 +37,10 @@ export default defineConfig(({ command }) => ({
               replacement: resolve(root, 'packages/core/style.css'),
             },
             {
+              find: `${scope}/tify-plugin-core/demo.css`,
+              replacement: resolve(root, 'packages/core/demo.css'),
+            },
+            {
               find: `${scope}/tify-plugin-musicxml/musicxml.css`,
               replacement: resolve(root, 'packages/plugin-musicxml/src/musicxml.css'),
             },

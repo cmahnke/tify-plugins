@@ -14,7 +14,7 @@ TIFY has no formal plugin registry, so plugins here are wrapper modules around a
 
 Each workspace is independently publishable: it carries its own `package.json`,
 README, example, and translations; `npm publish --workspace …` ships only
-`dist/` (plus core's `style.css`) — examples and sources stay dev-only.
+`dist/` (plus core's stylesheets) — examples and sources stay dev-only.
 
 | Package                                                                      | npm name                                     | What it does                                              |
 | ---------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------- |

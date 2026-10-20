@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-side-panel",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Custom metadata side panel plugin for the TIFY IIIF viewer",
   "type": "module",
   "license": "AGPL-3.0-or-later",

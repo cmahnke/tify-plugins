@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-musicxml",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MusicXML score rendering and playback plugin for the TIFY IIIF viewer",
   "type": "module",
   "license": "AGPL-3.0-or-later",

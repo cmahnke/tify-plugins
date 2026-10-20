@@ -33,7 +33,11 @@ import '@projektemacher/tify-plugin-core/style.css';
 - **Dock** — `dockPanel()` with `DOCK_ICONS`; see below.
 - **i18n** — `createTranslator`, `applyStaticTranslations`; see below.
 - **Styles** — `@projektemacher/tify-plugin-core/style.css` (panel skeleton,
-  dock buttons, markers, pills).
+  dock buttons, markers, pills). Holds only plugin-scoped rules — no `body`,
+  `:root`, or other globals that would leak into the host page. Demo/example
+  page chrome (page resets, layout, code highlighting) lives in the separate
+  `@projektemacher/tify-plugin-core/demo.css`, which only this repo's demo
+  pages import.
 
 ## Docked panels
 
