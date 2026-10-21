@@ -124,6 +124,16 @@
   margin-bottom: 0.3rem;
 }
 
+/* Page selector row (double-page spreads): which of the shown pages plays. */
+.player-page-row {
+  justify-content: center;
+}
+
+.player-page {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.25rem;
+}
+
 .player-staff-toggle,
 .player-instrument,
 .player-score,

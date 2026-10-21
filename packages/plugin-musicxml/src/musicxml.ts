@@ -20,6 +20,7 @@ import {
   createSidePanel,
   fetchText,
   getManifest,
+  getPages,
   getVisiblePages,
   onPagesChange,
   waitReady,
@@ -55,10 +56,18 @@ export interface MusicXmlOptions {
   dock?: boolean | 'auto';
   /** Open the docked panel after init (default true). */
   autoOpen?: boolean;
-  /** TEI override: absolute URL or raw TEI XML. Defaults to the canvas `rendering`. */
-  tei?: string;
-  /** MusicXML override: absolute URL or raw XML. Wins over the TEI-embedded score. */
-  musicxml?: string;
+  /**
+   * TEI override: absolute URL, raw TEI XML, or a per-page resolver
+   * (`(page) => url | undefined`, 1-based page number; `undefined` falls
+   * back to the canvas `rendering` discovery). A plain string applies to
+   * every page.
+   */
+  tei?: string | ((page: number) => string | undefined);
+  /**
+   * MusicXML override: absolute URL, raw XML, or a per-page resolver (same
+   * contract as `tei`). Wins over the TEI-embedded score.
+   */
+  musicxml?: string | ((page: number) => string | undefined);
   /** Render the aligned score onto the scan (default true, runtime toggle in the panel). */
   showScoreOverlay?: boolean;
   /** Staff band, note marker and playhead highlights (default true). */
@@ -76,6 +85,8 @@ const MUSICXML_FORMAT = 'application/vnd.recordare.musicxml+xml';
 const TEI_FORMAT = 'application/tei+xml';
 const DEFAULT_REGION_COLOR = '#ff6400';
 const DEFAULT_REGION_OPACITY = 0.25;
+/** TIFY's page gap in double-page mode (ViewMedia.vue gapBetweenPages). */
+const GAP_BETWEEN_PAGES = 0.005;
 
 /** '#rrggbb' (with or without '#') -> [r, g, b]; null when malformed. */
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -125,19 +136,13 @@ function makePoint(viewer: any, x: number, y: number): { x: number; y: number } 
   return Object.assign(Object.create(Object.getPrototypeOf(center)), { x, y });
 }
 
-/** Add a page-pixel-space element as a viewport overlay (after the image opens). */
-function addViewportOverlay(
-  viewer: any,
-  element: Element,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): () => void {
+/**
+ * Anchor an element to a page's position in the viewport (the rect TIFY's
+ * own layout computes for that page; see pageLayout). Re-placed on every
+ * open (TIFY re-opens on page changes); removed on teardown.
+ */
+function addViewportOverlay(viewer: any, element: Element, rect: PageLayoutEntry): () => void {
   const place = (): void => {
-    const tiledImage = viewer?.world?.getItemAt?.(0);
-    if (typeof tiledImage?.imageToViewportRectangle !== 'function') return;
-    const rect = tiledImage.imageToViewportRectangle(x, y, width, height);
     const location = makePoint(viewer, rect.x, rect.y);
     if (!location) return;
     try {
@@ -148,9 +153,7 @@ function addViewportOverlay(
   };
   // Re-place on every open (TIFY re-opens on page changes); removed on teardown.
   const onOpen = (): void => place();
-  if (viewer?.world?.getItemCount?.() > 0) {
-    place();
-  }
+  place();
   viewer?.addHandler?.('open', onOpen);
   return () => {
     viewer?.removeHandler?.('open', onOpen);
@@ -311,6 +314,75 @@ function pageScore(manifest: any, manifestUrl: string, page: number): PageScore 
   };
 }
 
+/** First localized canvas label string, or null. */
+function canvasLabel(canvas: any): string | null {
+  const raw = canvas?.label;
+  if (typeof raw === 'string') return raw;
+  if (raw && typeof raw === 'object') {
+    for (const value of Object.values(raw)) {
+      if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
+    }
+  }
+  return null;
+}
+
+/** Viewing-direction traits TIFY's page layout follows (plugins have no store access). */
+function viewingDirectionOf(manifest: any): { vertical: boolean; reversed: boolean } {
+  const direction = String(manifest?.viewingDirection ?? '');
+  return {
+    vertical: direction === 'top-to-bottom' || direction === 'bottom-to-top',
+    reversed: direction === 'right-to-left' || direction === 'bottom-to-top',
+  };
+}
+
+/** One shown page's rect in viewport coordinates (units of the first page's size). */
+interface PageLayoutEntry {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Where TIFY draws each shown page: replicate the viewer's own layout math
+ * (ViewMedia.vue initViewer/updateOverlays) from the manifest alone — pages
+ * side by side in units of the first shown page's size with a small gap,
+ * mirrored for right-to-left/bottom-to-top viewing directions. Page 0 (the
+ * blank filler facing the cover) reuses page 1's canvas, mirroring TIFY.
+ */
+function pageLayout(tify: Tify, manifest: any): PageLayoutEntry[] {
+  const shown = getPages(tify).filter((page) => page > -1);
+  if (shown.length === 0) return [];
+  const { vertical, reversed } = viewingDirectionOf(manifest);
+  const canvases = canvasesOf(manifest);
+  const sizeOf = (page: number): number => {
+    const canvas = canvases[(page === 0 ? 1 : page) - 1];
+    return Number(canvas?.[vertical ? 'height' : 'width'] ?? 0) || 1;
+  };
+  const firstSize = sizeOf(shown[0]);
+  const layouts: PageLayoutEntry[] = [];
+  let offset = 0;
+  for (const [index, page] of shown.entries()) {
+    if (index > 0) {
+      offset += (GAP_BETWEEN_PAGES + sizeOf(shown[index - 1]) / firstSize) * (reversed ? -1 : 1);
+    }
+    if (page === 0) continue;
+    const canvas = canvases[page - 1];
+    const width = Number(canvas?.width ?? 0);
+    const height = Number(canvas?.height ?? 0);
+    if (!(width > 0) || !(height > 0)) continue;
+    layouts.push({
+      page,
+      x: vertical ? 0 : offset,
+      y: vertical ? offset : 0,
+      width: width / firstSize,
+      height: height / firstSize,
+    });
+  }
+  return layouts;
+}
+
 export async function musicxmlPlugin(
   tify: Tify,
   options: MusicXmlOptions,
@@ -342,6 +414,10 @@ export async function musicxmlPlugin(
   let unsubscribe: (() => void) | null = null;
   let teardown: (() => void) | null = null;
   let drawToken = 0;
+  /** Page the panel plays; null falls back to the first visible page. */
+  let selectedPage: number | null = null;
+  /** Shown-page rects at the last sync (click hit-testing; pages fingerprint guards staleness). */
+  let layoutCache: { pages: string; layouts: PageLayoutEntry[] } | null = null;
 
   const clear = (): void => {
     teardown?.();
@@ -353,6 +429,7 @@ export async function musicxmlPlugin(
   const sync = async (token: number): Promise<void> => {
     if (disposed || token !== drawToken) return;
     clear();
+    bindCanvasClick();
     const pages = getVisiblePages(tify);
     if (pages.length === 0) return;
     try {
@@ -363,9 +440,52 @@ export async function musicxmlPlugin(
       }
       const manifest = await getManifest(tify);
       if (disposed || token !== drawToken) return;
-      const pageData = pageScore(manifest, manifestUrl, pages[0]);
+      // Keep a manual page selection while it stays visible; a fresh
+      // spread resets to the first page.
+      if (selectedPage === null || !pages.includes(selectedPage)) selectedPage = pages[0];
+      const current = selectedPage;
+      const layouts = pageLayout(tify, manifest);
+      layoutCache = { pages: JSON.stringify(getPages(tify)), layouts };
+
+      // Spreads: a dropdown picks which of the shown pages to play (the
+      // scan offers the same choice by tapping a page). Rendered before the
+      // score logic so it exists on no-score pages too.
+      if (pages.length > 1) {
+        const canvases = canvasesOf(manifest);
+        const row = document.createElement('div');
+        row.className = 'player-controls player-page-row';
+        const label = document.createElement('label');
+        label.className = 'player-tempo';
+        label.htmlFor = 'player-page-select';
+        label.textContent = t('Page');
+        const select = document.createElement('select');
+        select.className = 'player-page';
+        select.id = 'player-page-select';
+        select.setAttribute('aria-label', t('Page to play'));
+        for (const page of pages) {
+          const option = document.createElement('option');
+          option.value = String(page);
+          option.textContent = canvasLabel(canvases[page - 1]) ?? t('Page {n}', { n: page });
+          select.appendChild(option);
+        }
+        select.value = String(current);
+        select.addEventListener('change', () => {
+          const page = Number.parseInt(select.value, 10);
+          if (!Number.isFinite(page) || page === selectedPage) return;
+          selectedPage = page;
+          refresh();
+        });
+        row.append(label, select);
+        panel.body.append(row);
+      }
+
+      const pageData = pageScore(manifest, manifestUrl, current);
+      const pageRect = layouts.find((layout) => layout.page === current) ?? null;
       // The TEI is one fetch carrying both the staff geometry and the score.
-      const teiSource = options.tei ?? pageData?.teiUrl ?? null;
+      const teiSource =
+        (typeof options.tei === 'function' ? options.tei(current) : options.tei) ??
+        pageData?.teiUrl ??
+        null;
       let staves: StaffEntry[] = [];
       let teiMusicxml: string | null = null;
       if (teiSource) {
@@ -384,7 +504,11 @@ export async function musicxmlPlugin(
       }
       // Explicit MusicXML override wins over the TEI-embedded copy; the loose
       // MusicXML rendering is the fallback when there is no usable TEI.
-      const source = options.musicxml ?? teiMusicxml ?? pageData?.musicxmlUrl ?? null;
+      const source =
+        (typeof options.musicxml === 'function' ? options.musicxml(current) : options.musicxml) ??
+        teiMusicxml ??
+        pageData?.musicxmlUrl ??
+        null;
       if (!source) {
         panel.status.textContent = t('No score on this page');
         return;
@@ -406,6 +530,7 @@ export async function musicxmlPlugin(
         },
         xmlText,
         token,
+        pageRect,
       );
     } catch (error) {
       if (disposed || token !== drawToken) return;
@@ -419,7 +544,12 @@ export async function musicxmlPlugin(
     staves: StaffEntry[];
   }
 
-  const setupScore = (score: ScoreDims, xmlText: string, token: number): void => {
+  const setupScore = (
+    score: ScoreDims,
+    xmlText: string,
+    token: number,
+    pageRect: PageLayoutEntry | null,
+  ): void => {
     const timeline: MusicTimeline = parseMusicXML(xmlText);
     const staffEntries = score.staves;
     const regionOpts = options.regionOverlay ?? {};
@@ -737,9 +867,9 @@ export async function musicxmlPlugin(
     const updateScoreOverlay = (): void => {
       // Without a layout (no staff data to align to) there is nothing to
       // show — the overlay stays unmounted.
-      if (!scoreSvg || !showScore || !renderer.getLayout()) return;
+      if (!scoreSvg || !showScore || !pageRect || !renderer.getLayout()) return;
       if (!scoreOverlayAdded) {
-        removeScoreOverlay = addViewportOverlay(viewer, scoreSvg, 0, 0, score.width, score.height);
+        removeScoreOverlay = addViewportOverlay(viewer, scoreSvg, pageRect);
         scoreOverlayAdded = true;
       }
       if (!scoreContentMounted) {
@@ -770,14 +900,12 @@ export async function musicxmlPlugin(
 
     const mountOverlays = (): void => {
       if (disposed || token !== drawToken) return;
-      if (score.width <= 0 || score.height <= 0) return;
+      if (score.width <= 0 || score.height <= 0 || !pageRect) return;
       if (overlaySvg) {
-        removeOverlays.push(
-          addViewportOverlay(viewer, overlaySvg, 0, 0, score.width, score.height),
-        );
+        removeOverlays.push(addViewportOverlay(viewer, overlaySvg, pageRect));
       }
       if (regionSvg) {
-        removeOverlays.push(addViewportOverlay(viewer, regionSvg, 0, 0, score.width, score.height));
+        removeOverlays.push(addViewportOverlay(viewer, regionSvg, pageRect));
       }
     };
     mountOverlays();
@@ -1040,6 +1168,44 @@ export async function musicxmlPlugin(
     void sync(drawToken);
   };
 
+  // Tapping/clicking a shown page plays it (double-page spreads only).
+  // Deliberately indicator-free: no cursor change, no hover styling, no
+  // marker — the dropdown selection and the reloaded panel are the
+  // feedback. Taps resolve through the same page rects the overlays use.
+  const onCanvasClick = (event: any): void => {
+    if (disposed || !event?.quick || !event.position) return;
+    if (getVisiblePages(tify).length < 2) return;
+    const cache = layoutCache;
+    if (!cache || cache.pages !== JSON.stringify(getPages(tify))) return;
+    const viewer = tify.viewer;
+    const viewport = viewer?.viewport;
+    if (typeof viewport?.pointFromPixel !== 'function') return;
+    const pixel = makePoint(viewer, event.position.x, event.position.y);
+    if (!pixel) return;
+    const point = viewport.pointFromPixel(pixel);
+    const hit = cache.layouts.find(
+      (layout) =>
+        point.x >= layout.x &&
+        point.x < layout.x + layout.width &&
+        point.y >= layout.y &&
+        point.y < layout.y + layout.height,
+    );
+    if (!hit || hit.page === selectedPage) return;
+    selectedPage = hit.page;
+    refresh();
+  };
+
+  // Bind to the current viewer on every sync: the viewer is created when
+  // TIFY's media view mounts, so it may not exist at plugin init and is
+  // replaced if the view is toggled away and back.
+  let boundViewer: any = null;
+  const bindCanvasClick = (): void => {
+    const viewer = tify.viewer;
+    if (!viewer || viewer === boundViewer) return;
+    boundViewer = viewer;
+    viewer.addHandler('canvas-click', onCanvasClick);
+  };
+
   unsubscribe = onPagesChange(tify, refresh);
   drawToken += 1;
   await sync(drawToken);
@@ -1048,6 +1214,7 @@ export async function musicxmlPlugin(
     refresh,
     destroy() {
       disposed = true;
+      boundViewer?.removeHandler?.('canvas-click', onCanvasClick);
       unregister();
       drawToken += 1;
       unsubscribe?.();

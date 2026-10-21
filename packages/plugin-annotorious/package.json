@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-annotorious",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Display-only Annotorious annotations plugin for the TIFY IIIF viewer",
   "type": "module",
   "license": "AGPL-3.0-or-later",

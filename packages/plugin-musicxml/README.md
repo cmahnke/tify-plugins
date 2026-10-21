@@ -19,11 +19,23 @@ const plugin = await musicxmlPlugin(tify, {
 ```
 
 Options: `panelEl` (required, sidecar unless docked), `dock?: boolean | 'auto'`
-(default `'auto'`), `tei?: string` (absolute TEI URL or raw TEI XML — overrides
-the manifest discovery below), `musicxml?: string` (absolute URL or raw XML —
-wins over the TEI-embedded score), `showScoreOverlay?` (default `true`),
+(default `'auto'`), `tei?: string | ((page: number) => string | undefined)`
+(absolute TEI URL, raw TEI XML, or a per-page resolver — overrides the
+manifest discovery below; a plain string applies to every page),
+`musicxml?: string | ((page: number) => string | undefined)` (absolute URL,
+raw XML, or per-page resolver — wins over the TEI-embedded score),
+`showScoreOverlay?` (default `true`),
 `showHighlights?` (default `true`), `regionOverlay?: { enabled?, color?,
 opacity? }` (default off, `#ff6400`, 25% alpha).
+
+## Double-page spreads
+
+When TIFY shows two pages at once (double-page mode), the panel gains a
+**Page** dropdown listing the shown pages — the played page can be switched
+there. Tapping or clicking one of the shown pages plays that page too
+(deliberately without any visual indicator; the dropdown selection and the
+reloaded panel are the only feedback). The score, staff regions and
+playback highlights are placed on the selected page's scan either way.
 
 The panel mirrors the
 [score-page viewer](https://github.com/cmahnke/Blogs/tree/main/kinderbuecher)'s

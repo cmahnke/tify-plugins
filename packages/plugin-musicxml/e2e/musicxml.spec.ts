@@ -15,29 +15,36 @@ const SCORE_XML = readFileSync(path.join(here, '..', 'test-fixtures', 'page006.m
 const EMBEDDED_SCORE = SCORE_XML.replace(/^<\?xml[^>]*\?>\s*/, '');
 
 /**
- * Synthetic homr page TEI: one staff zone over 750×1000 canvas pixels, five
- * staff lines (20 px apart, slight slope), homr application header, and the
- * fixture MusicXML embedded under <div type="score">.
+ * Synthetic homr page TEI: staff zones over 750×1000 canvas pixels, five
+ * staff lines per zone (20 px apart, slight slope), homr application header,
+ * and the fixture MusicXML embedded under <div type="score">. The staff
+ * count is configurable so spreads can tell pages apart (region counts).
  */
-function pageTei(): string {
+function pageTei(staffCount = 1, title = 'Mock Score (page 1)'): string {
   const x0 = 50;
-  const y0 = 100;
   const x1 = 700;
   const points = 8;
-  const paths = [];
-  for (let k = 0; k < 5; k++) {
-    const pts: string[] = [];
-    for (let i = 0; i < points; i++) {
-      const x = x0 + ((x1 - x0) * i) / (points - 1);
-      pts.push(`${x},${y0 + k * 20 + 0.02 * (x - x0)}`);
+  const zones: string[] = [];
+  for (let staff = 0; staff < staffCount; staff++) {
+    const y0 = 100 + staff * 200;
+    const paths = [];
+    for (let k = 0; k < 5; k++) {
+      const pts: string[] = [];
+      for (let i = 0; i < points; i++) {
+        const x = x0 + ((x1 - x0) * i) / (points - 1);
+        pts.push(`${x},${y0 + k * 20 + 0.02 * (x - x0)}`);
+      }
+      paths.push(`        <path type="staff-line" points="${pts.join(' ')}"/>`);
     }
-    paths.push(`        <path type="staff-line" points="${pts.join(' ')}"/>`);
+    zones.push(
+      `      <zone xml:id="p1-staff-${staff + 1}" type="staff" ulx="${x0}" uly="${y0}" lrx="${x1}" lry="${y0 + 140}">\n${paths.join('\n')}\n      </zone>`,
+    );
   }
   return `<?xml version="1.0" encoding="UTF-8"?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
   <teiHeader>
     <fileDesc>
-      <titleStmt><title>Mock Score (page 1)</title></titleStmt>
+      <titleStmt><title>${title}</title></titleStmt>
       <publicationStmt><publisher>Mock</publisher></publicationStmt>
       <sourceDesc><bibl><title>Mock Score Book</title></bibl></sourceDesc>
     </fileDesc>
@@ -53,9 +60,7 @@ function pageTei(): string {
   <facsimile>
     <surface ulx="0" uly="0" lrx="750" lry="1000">
       <graphic url="${MOCK_BASE}/image"/>
-      <zone xml:id="p1-staff-1" type="staff" ulx="50" uly="100" lrx="700" lry="240">
-${paths.join('\n')}
-      </zone>
+${zones.join('\n')}
     </surface>
   </facsimile>
   <text>
@@ -121,6 +126,67 @@ async function mockScore(page: Page): Promise<void> {
   await page.route(TEI_URL, (route) =>
     route.fulfill({ body: pageTei(), contentType: 'application/xml' }),
   );
+}
+
+/** Three-canvas manifest; each canvas carries its own TEI rendering (per-page staff counts). */
+function spreadManifest(): object {
+  const canvas = (page: number): object => ({
+    id: `${MOCK_BASE}/canvas/p${page}`,
+    type: 'Canvas',
+    label: { en: [`Page ${page}`] },
+    width: 750,
+    height: 1000,
+    items: [
+      {
+        id: `${MOCK_BASE}/page/p${page}/1`,
+        type: 'AnnotationPage',
+        items: [
+          {
+            id: `${MOCK_BASE}/annotation/p${page}-image`,
+            type: 'Annotation',
+            motivation: 'painting',
+            body: {
+              id: `${MOCK_BASE}/image/full/750,1000/0/default.jpg`,
+              type: 'Image',
+              format: 'image/jpeg',
+              width: 750,
+              height: 1000,
+              service: [{ id: `${MOCK_BASE}/image`, type: 'ImageService3', profile: 'level2' }],
+            },
+            target: `${MOCK_BASE}/canvas/p${page}`,
+          },
+        ],
+      },
+    ],
+    rendering: [
+      {
+        id: `${MOCK_BASE}/page${page}.tei.xml`,
+        type: 'Text',
+        format: 'application/tei+xml',
+        label: { en: ['TEI (staff regions + embedded MusicXML)'] },
+      },
+    ],
+  });
+  return {
+    '@context': 'http://iiif.io/api/presentation/3/context.json',
+    id: `${MOCK_BASE}/manifest.json`,
+    type: 'Manifest',
+    label: { en: ['Mock Score Book'] },
+    items: [1, 2, 3].map(canvas),
+  };
+}
+
+/** Mock the spread manifest plus its three per-page TEI documents. */
+async function mockSpread(page: Page): Promise<void> {
+  await mockIiif(page, { manifest: spreadManifest(), info: buildInfo() });
+  for (const page_ of [1, 2, 3]) {
+    await page.route(`${MOCK_BASE}/page${page_}.tei.xml`, (route) =>
+      route.fulfill({
+        body: pageTei(page_, `Mock Score (page ${page_})`),
+        contentType: 'application/xml',
+      }),
+    );
+  }
 }
 
 /** Record every scheduled oscillator start (time + frequency + waveform). */
@@ -454,4 +520,119 @@ test('discovers a v2 TEI rendering', async ({ page }) => {
   await expect(page.locator('.score-overlay > svg.score-system').first()).toBeVisible({
     timeout: 30_000,
   });
+});
+
+/** Viewport-space placement of the region overlay relative to the viewer canvas. */
+async function regionOverlaySide(page: Page): Promise<'left' | 'right'> {
+  return page.evaluate(() => {
+    const canvas = document.querySelector('#tify canvas')?.getBoundingClientRect();
+    // OSD 5 wraps overlays in a div whose id is "overlay-wrapper[–<el.id>]".
+    const wrapper = Array.from(document.querySelectorAll('[id^="overlay-wrapper"]'))
+      .find((el) => el.querySelector('.region-overlay'))
+      ?.getBoundingClientRect();
+    if (!canvas || !wrapper) return 'left';
+    return wrapper.left + wrapper.width / 2 > canvas.left + canvas.width / 2 ? 'right' : 'left';
+  });
+}
+
+test('double-page spread: dropdown and tapping select which page plays', async ({ page }) => {
+  const teiFetches: string[] = [];
+  page.on('request', (request) => {
+    if (/\/page\d\.tei\.xml$/.test(request.url())) teiFetches.push(request.url());
+  });
+
+  await mockSpread(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  // Single page: no page selector.
+  await expect(page.locator('.player-page')).toHaveCount(0);
+  await expect(page.locator('.region-overlay .staff-region')).toHaveCount(1, { timeout: 30_000 });
+
+  // Cover spread (pages 0+1): still one playable page, so no selector —
+  // and the cover's overlay sits on the filler's right side (LTR).
+  await page.locator('button[title="Toggle double-page"]').click();
+  await expect(page.locator('.player-page')).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('.region-overlay .staff-region')).toHaveCount(1, { timeout: 30_000 });
+  await expect.poll(() => regionOverlaySide(page)).toBe('right');
+
+  // Next page in double-page mode: spread [2, 3] — the selector appears.
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  const select = page.locator('.player-page');
+  await expect(select).toBeVisible({ timeout: 30_000 });
+  await expect(select.locator('option')).toHaveCount(2);
+  await expect(select).toHaveValue('2');
+  // Page 2's TEI: two staff zones, overlay on the left (first) page.
+  await expect(page.locator('.region-overlay .staff-region')).toHaveCount(2, { timeout: 30_000 });
+  await expect.poll(() => regionOverlaySide(page)).toBe('left');
+
+  // Dropdown: play the facing page instead — its TEI loads, three regions,
+  // and the overlay moves to the right half of the spread.
+  await select.selectOption('3');
+  await expect(page.locator('.player-page')).toHaveValue('3');
+  await expect(page.locator('.region-overlay .staff-region')).toHaveCount(3, { timeout: 30_000 });
+  await expect.poll(() => regionOverlaySide(page)).toBe('right');
+
+  // Click the left page: selects it (dropdown follows), overlay back left.
+  await page
+    .locator('#tify .openseadragon-canvas')
+    .first()
+    .click({ position: { x: 219, y: 100 } });
+  await expect(page.locator('.player-page')).toHaveValue('2', { timeout: 30_000 });
+  await expect(page.locator('.region-overlay .staff-region')).toHaveCount(2, { timeout: 30_000 });
+  await expect.poll(() => regionOverlaySide(page)).toBe('left');
+
+  // Clicking the already-playing page re-syncs nothing (no fresh TEI fetch).
+  const fetchCount = teiFetches.length;
+  await page
+    .locator('#tify .openseadragon-canvas')
+    .first()
+    .click({ position: { x: 219, y: 100 } });
+  await page.waitForTimeout(1200);
+  expect(teiFetches.length).toBe(fetchCount);
+});
+
+test.describe('double-page touch taps', () => {
+  test.use({ hasTouch: true });
+
+  test('tapping the facing page plays it', async ({ page }) => {
+    await mockSpread(page);
+    await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+    await openPlayer(page);
+    await page.locator('button[title="Toggle double-page"]').click();
+    await page.locator('button[title="Next page"] >> nth=0').click();
+    const select = page.locator('.player-page');
+    await expect(select).toBeVisible({ timeout: 30_000 });
+    await expect(select).toHaveValue('2');
+    // Undock first: the panel overlays the viewer's right side and would
+    // swallow the tap.
+    await page.locator('.tify-plugin-dock-btn').click();
+    await page
+      .locator('#tify .openseadragon-canvas')
+      .first()
+      .tap({ position: { x: 550, y: 100 } });
+    await page.locator('.tify-plugin-dock-btn').click();
+    await expect(select).toHaveValue('3', { timeout: 30_000 });
+    await expect(page.locator('.region-overlay .staff-region')).toHaveCount(3, { timeout: 30_000 });
+  });
+});
+
+test('clicking the facing page plays it (mouse)', async ({ page }) => {
+  await mockSpread(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  await page.locator('button[title="Toggle double-page"]').click();
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  const select = page.locator('.player-page');
+  await expect(select).toBeVisible({ timeout: 30_000 });
+  await expect(select).toHaveValue('2');
+  // Undock first: the panel overlays the viewer's right side and would
+  // swallow the click.
+  await page.locator('.tify-plugin-dock-btn').click();
+  await page
+    .locator('#tify .openseadragon-canvas')
+    .first()
+    .click({ position: { x: 550, y: 100 } });
+  await page.locator('.tify-plugin-dock-btn').click();
+  await expect(select).toHaveValue('3', { timeout: 30_000 });
+  await expect(page.locator('.region-overlay .staff-region')).toHaveCount(3, { timeout: 30_000 });
 });
