@@ -98,15 +98,6 @@ export interface PlaybackCallbacks {
 const BEAT_EPS = 1e-6;
 /** Lead-in before the first grid time (context resume, timer setup). */
 const LEAD_IN = 0.05;
-/** How long play() waits for a suspended context to resume before virtual-clock playback. */
-const RESUME_WATCHDOG_MS = 250;
-
-/** Promise that resolves after `ms` — loses the race once resume() settles first. */
-function watchdog(ms: number): Promise<void> {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
 
 /**
  * Simple Web Audio playback engine. Drives the note timeline and fires
@@ -125,7 +116,7 @@ export class MusicPlayer {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private deadAudio = false;
-  private frozenAudio = false;
+  private clockIsReal = false;
   private fallbackBase = 0;
   private fallbackOffset = 0;
   private timeouts: number[] = [];
@@ -211,7 +202,9 @@ export class MusicPlayer {
   }
 
   private now(): number {
-    if (this.ctx && !this.frozenAudio) return this.ctx.currentTime;
+    if (this.ctx && this.clockIsReal && this.ctx.state === 'running') {
+      return this.ctx.currentTime;
+    }
     return this.fallbackOffset + (performance.now() - this.fallbackBase) / 1000;
   }
 
@@ -220,6 +213,7 @@ export class MusicPlayer {
     if (!this.ctx) {
       try {
         this.ctx = new AudioContext();
+        this.ctx.onstatechange = (): void => this.syncClock();
         this.master = this.ctx.createGain();
         this.master.gain.value = 0.3;
         this.master.connect(this.ctx.destination);
@@ -231,6 +225,30 @@ export class MusicPlayer {
       }
     }
     return this.ctx;
+  }
+
+  /**
+   * Keep the anchor consistent across context state transitions. A context
+   * that starts running mid-playback (resume settled late, e.g. after the
+   * virtual clock already drives the grid) re-anchors onto the audio clock;
+   * one that stops running mid-playback continues on the virtual clock. Both
+   * directions preserve the musical position, so highlights and scheduling
+   * stay on the beat either way.
+   */
+  private syncClock(): void {
+    const ctx = this.ctx;
+    if (!ctx || this.deadAudio) return;
+    if (ctx.state === 'running') {
+      if (!this.playing || this.clockIsReal) return;
+      this.fromBeat += ((this.now() - this.baseTime) * this.tempo) / 60;
+      this.baseTime = ctx.currentTime;
+      this.clockIsReal = true;
+    } else if (this.playing && this.clockIsReal) {
+      this.fromBeat += ((ctx.currentTime - this.baseTime) * this.tempo) / 60;
+      this.clockIsReal = false;
+      this.fallbackOffset = ctx.currentTime;
+      this.fallbackBase = performance.now();
+    }
   }
 
   private noteToFreq(note: ParsedNote): number {
@@ -359,47 +377,32 @@ export class MusicPlayer {
     const start = (): void => {
       // stop() may have won the race against the pending resume.
       if (!this.playing || epoch !== this.epoch) return;
-      this.baseTime = this.now() + LEAD_IN;
+      if (ctx && ctx.state === 'running') {
+        this.clockIsReal = true;
+        this.baseTime = ctx.currentTime + LEAD_IN;
+      } else {
+        // The context is missing or not advancing (suspended, no audio
+        // device): anchor on the virtual clock and schedule immediately —
+        // waiting for resume() would stall playback entirely on runners
+        // whose resume() never settles. The virtual clock keeps its value
+        // across pause/resume, mirroring the real clock's continuity.
+        this.clockIsReal = false;
+        this.fallbackBase = performance.now();
+        this.baseTime = this.now() + LEAD_IN;
+      }
       this.fromBeat = resumeBeat;
       this.scheduleFrom(resumeBeat, epoch);
     };
-    // Resuming a suspended context must await the resume: the clock is
-    // frozen until then, so the grid anchor would drift if set early. A
-    // resume() also cancels a suspend() that is still in flight (rapid
-    // pause → play).
-    if (this.deadAudio || this.frozenAudio) {
-      this.fallbackOffset = 0;
-      this.fallbackBase = performance.now();
-      start();
-    } else if (ctx && (resumeBeat > 0 || ctx.state === 'suspended')) {
-      // A context may construct fine yet never start running (no audio
-      // device on CI runners): its resume() then never settles, so race it
-      // against a watchdog and fall back to the virtual clock — the context
-      // itself stays usable as a silent oscillator factory.
-      let resumed: Promise<void>;
+    start();
+    // Sound joins in whenever the context actually starts running; syncClock
+    // re-anchors the grid onto the audio clock at that moment. A resume()
+    // also cancels a suspend() that is still in flight (rapid pause → play).
+    if (ctx && ctx.state !== 'running') {
       try {
-        resumed = ctx.resume();
+        void ctx.resume().catch(() => {});
       } catch {
-        resumed = Promise.reject();
+        // resume() itself unavailable — the virtual clock already covers it.
       }
-      void Promise.race([resumed, watchdog(RESUME_WATCHDOG_MS)]).then(
-        () => {
-          if (!this.playing || epoch !== this.epoch) return;
-          if (ctx.state !== 'running') {
-            this.frozenAudio = true;
-            this.fallbackBase = performance.now();
-          }
-          start();
-        },
-        () => {
-          if (!this.playing || epoch !== this.epoch) return;
-          this.frozenAudio = true;
-          this.fallbackBase = performance.now();
-          start();
-        },
-      );
-    } else {
-      start();
     }
   }
 
@@ -409,10 +412,16 @@ export class MusicPlayer {
     this.playing = false;
     for (const id of this.timeouts) window.clearTimeout(id);
     this.timeouts = [];
-    if (this.deadAudio || this.frozenAudio) {
-      this.fallbackOffset += (performance.now() - this.fallbackBase) / 1000;
-    } else if (this.ctx) {
+    if (this.ctx && this.ctx.state === 'running') {
+      // Seed the virtual clock with the real clock's position: if the next
+      // play() still finds the context suspended, the resumed grid must
+      // continue at the same absolute times (mirrors suspend/resume, where
+      // currentTime freezes and continues).
+      this.fallbackOffset = this.ctx.currentTime;
+      this.fallbackBase = performance.now();
       void this.ctx.suspend();
+    } else if (!this.clockIsReal) {
+      this.fallbackOffset += (performance.now() - this.fallbackBase) / 1000;
     }
   }
 

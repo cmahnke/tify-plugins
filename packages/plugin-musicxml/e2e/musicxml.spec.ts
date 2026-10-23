@@ -780,6 +780,68 @@ test('plays when the AudioContext never starts running', async ({ page }) => {
   expect(starts[0].w).toBe('triangle');
 });
 
+test('resumes from the paused beat on a context that never starts running', async ({ page }) => {
+  await page.addInitScript(() => {
+    const StuckCtx = class {
+      state = 'suspended';
+      currentTime = 0;
+      sampleRate = 48000;
+      destination = {};
+      resume() {
+        return new Promise<void>(() => {});
+      }
+      suspend() {
+        return Promise.resolve();
+      }
+      close() {
+        return Promise.resolve();
+      }
+      createGain() {
+        return {
+          gain: {
+            value: 0,
+            setValueAtTime() {},
+            exponentialRampToValueAtTime() {},
+          },
+          connect() {},
+        };
+      }
+      createBiquadFilter() {
+        return { type: '', frequency: { value: 0 }, connect() {} };
+      }
+      createOscillator() {
+        return {
+          type: '',
+          frequency: { value: 0 },
+          connect() {},
+          start() {},
+          stop() {},
+          onended: null,
+          disconnect() {},
+        };
+      }
+    };
+    Object.assign(window, { AudioContext: StuckCtx });
+  });
+  await interceptOscillators(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  await page.locator('.player-btn').first().click();
+  // Pause inside the window where a naive implementation still trusts the
+  // frozen real clock: the paused beat must come from the virtual clock, so
+  // resuming strikes beat 1 (G4 + B3), never re-strikes beat 0 (G4 + G3).
+  await page.waitForTimeout(150);
+  await page.locator('.player-btn').nth(1).click();
+  await page.locator('.player-btn').first().click();
+  await page.waitForTimeout(1500);
+  const starts = await oscStarts(page);
+  expect(starts.length).toBeGreaterThanOrEqual(4);
+  expect(starts[0].f).toBeCloseTo(392, 0);
+  expect(starts[1].f).toBeCloseTo(196, 0);
+  expect(starts[2].f).toBeCloseTo(392, 0);
+  expect(starts[3].f).toBeCloseTo(246.94, 0);
+});
+
 test('page border marks the playing page in double-page spreads only', async ({ page }) => {
   await mockSpread(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
