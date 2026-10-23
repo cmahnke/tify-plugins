@@ -12,8 +12,9 @@
 //        node scripts/ci-publish-guard.mjs --metadata
 // The default mode writes GITHUB_OUTPUT-style assignments (matrix/any/dirs)
 // to --out, or to $GITHUB_OUTPUT when set, else stdout, and also checks the
-// citation metadata. --metadata runs only that check (for the CI app job,
-// without needing git tags): it fails when the version in CITATION.cff or
+// citation metadata. --metadata runs only that check (also used as a
+// release-prep check via `npm run test:citation`): it fails when the version
+// in CITATION.cff or
 // codemeta.json no longer matches the workspace packages.
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';

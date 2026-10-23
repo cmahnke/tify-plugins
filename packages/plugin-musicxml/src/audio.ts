@@ -115,6 +115,9 @@ export class MusicPlayer {
   private timeline: MusicTimeline;
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private deadAudio = false;
+  private fallbackBase = 0;
+  private fallbackOffset = 0;
   private timeouts: number[] = [];
   private playing = false;
   private tempo = 120;
@@ -147,7 +150,7 @@ export class MusicPlayer {
   setTempo(bpm: number): void {
     const next = Number.isFinite(bpm) && bpm > 0 ? bpm : 120;
     if (next === this.tempo) return;
-    if (!this.playing || !this.ctx) {
+    if (!this.playing) {
       this.tempo = next;
       return;
     }
@@ -158,7 +161,7 @@ export class MusicPlayer {
     this.tempo = next;
     // No lead-in on a live change: the current beat continues sounding now.
     this.fromBeat = nowBeat;
-    this.baseTime = this.ctx.currentTime;
+    this.baseTime = this.now();
     this.scheduleFrom(nowBeat, this.epoch);
   }
 
@@ -194,16 +197,28 @@ export class MusicPlayer {
 
   /** The beat sounding right now (meaningful while playing). */
   private beatNow(): number {
-    if (!this.ctx) return this.fromBeat;
-    return this.fromBeat + ((this.ctx.currentTime - this.baseTime) * this.tempo) / 60;
+    return this.fromBeat + ((this.now() - this.baseTime) * this.tempo) / 60;
   }
 
-  private ensureContext(): AudioContext {
+  private now(): number {
+    if (this.ctx) return this.ctx.currentTime;
+    return this.fallbackOffset + (performance.now() - this.fallbackBase) / 1000;
+  }
+
+  private ensureContext(): AudioContext | null {
+    if (this.deadAudio) return null;
     if (!this.ctx) {
-      this.ctx = new AudioContext();
-      this.master = this.ctx.createGain();
-      this.master.gain.value = 0.3;
-      this.master.connect(this.ctx.destination);
+      try {
+        this.ctx = new AudioContext();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.3;
+        this.master.connect(this.ctx.destination);
+      } catch {
+        this.deadAudio = true;
+        this.ctx = null;
+        this.master = null;
+        return null;
+      }
     }
     return this.ctx;
   }
@@ -215,7 +230,7 @@ export class MusicPlayer {
 
   private playTone(freq: number, t0: number, durSec: number, instrument: Instrument): void {
     const ctx = this.ensureContext();
-    if (!this.master) return;
+    if (!ctx || !this.master) return;
     const voice = VOICES[instrument];
     // t0 is the exact musical grid time on the audio clock, not "now": the
     // firing setTimeout only drives the UI callbacks, so the audio stays on
@@ -278,7 +293,6 @@ export class MusicPlayer {
    * else needs cancelling).
    */
   private scheduleFrom(startBeat: number, epoch: number): void {
-    const ctx = this.ensureContext();
     let absBeat = 0;
     // OMR output occasionally contains artifact notes: zero-duration notes
     // and repeated notes at the same position. Both would fire at the same
@@ -305,7 +319,7 @@ export class MusicPlayer {
             this.playTone(this.noteToFreq(n), atSec, durSec, track.instrument);
             this.cb.onNote?.(n, index);
           },
-          Math.max(0, (atSec - ctx.currentTime) * 1000),
+          Math.max(0, (atSec - this.now()) * 1000),
         );
         this.timeouts.push(id);
       }
@@ -318,7 +332,7 @@ export class MusicPlayer {
         this.stop();
         this.cb.onEnd?.();
       },
-      Math.max(0, (this.secOf(absBeat) - ctx.currentTime) * 1000) + 200,
+      Math.max(0, (this.secOf(absBeat) - this.now()) * 1000) + 200,
     );
     this.timeouts.push(endId);
   }
@@ -335,7 +349,7 @@ export class MusicPlayer {
     const start = (): void => {
       // stop() may have won the race against the pending resume.
       if (!this.playing || epoch !== this.epoch) return;
-      this.baseTime = ctx.currentTime + LEAD_IN;
+      this.baseTime = this.now() + LEAD_IN;
       this.fromBeat = resumeBeat;
       this.scheduleFrom(resumeBeat, epoch);
     };
@@ -343,8 +357,11 @@ export class MusicPlayer {
     // frozen until then, so the grid anchor would drift if set early. A
     // resume() also cancels a suspend() that is still in flight (rapid
     // pause → play).
-    if (resumeBeat > 0 || ctx.state === 'suspended') {
-      void ctx.resume().then(start, start);
+    if (this.deadAudio) {
+      this.fallbackBase = performance.now();
+      start();
+    } else if (resumeBeat > 0 || ctx?.state === 'suspended') {
+      void ctx?.resume().then(start, start);
     } else {
       start();
     }
@@ -356,7 +373,11 @@ export class MusicPlayer {
     this.playing = false;
     for (const id of this.timeouts) window.clearTimeout(id);
     this.timeouts = [];
-    if (this.ctx) void this.ctx.suspend();
+    if (this.deadAudio) {
+      this.fallbackOffset += (performance.now() - this.fallbackBase) / 1000;
+    } else if (this.ctx) {
+      void this.ctx.suspend();
+    }
   }
 
   stop(): void {

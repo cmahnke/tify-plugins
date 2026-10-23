@@ -706,6 +706,23 @@ test('resume continues from the paused position', async ({ page }) => {
   expect(next.t).toBeGreaterThan(paused[paused.length - 1].t);
 });
 
+test('plays on a virtual clock without a working AudioContext', async ({ page }) => {
+  await page.addInitScript(() => {
+    const Broken = class {
+      constructor() {
+        throw new Error('no audio device');
+      }
+    };
+    Object.assign(window, { AudioContext: Broken });
+  });
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  await page.locator('.player-btn').first().click();
+  await expect(page.locator('.staff-current').first()).toHaveAttribute('visibility', 'visible', {
+    timeout: 15_000,
+  });
+});
+
 test('page border marks the playing page in double-page spreads only', async ({ page }) => {
   await mockSpread(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);

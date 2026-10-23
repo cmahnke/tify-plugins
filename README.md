@@ -143,7 +143,7 @@ repository, and TIFY as the wrapped viewer.
 
 Version bumps must update both files' `version` (and `date-released` /
 `dateModified`) — the publish guard (`npm run test:citation`) fails otherwise,
-in CI and before any release.
+before any release.
 
 ```sh
 node scripts/ci-publish-guard.mjs --metadata
