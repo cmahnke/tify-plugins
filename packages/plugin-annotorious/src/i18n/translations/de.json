@@ -19,7 +19,6 @@
   "No annotations on this page": "Keine Annotationen auf dieser Seite",
   "Read-only annotations imported from the IIIF manifest.": "Schreibgeschützte Annotationen aus dem IIIF-Manifest.",
   "Shapes not rendered (WebGL unavailable)": "Formen werden nicht gerendert (WebGL nicht verfügbar)",
-  "Showing annotations for the first page only": "Nur Annotationen der ersten Seite werden angezeigt",
   "Simple tagging (Göttingen)": "Einfaches Tagging (Göttingen)",
   "Tag with external resource (Göttingen)": "Tag mit externer Ressource (Göttingen)",
   "Viewer not ready": "Viewer nicht bereit"

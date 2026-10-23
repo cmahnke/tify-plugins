@@ -522,17 +522,17 @@ test('discovers a v2 TEI rendering', async ({ page }) => {
   });
 });
 
-/** Viewport-space placement of the region overlay relative to the viewer canvas. */
-async function regionOverlaySide(page: Page): Promise<'left' | 'right'> {
-  return page.evaluate(() => {
+/** Viewport-space placement of an overlay wrapper relative to the viewer canvas. */
+async function overlaySide(page: Page, selector: string): Promise<'left' | 'right'> {
+  return page.evaluate((sel) => {
     const canvas = document.querySelector('#tify canvas')?.getBoundingClientRect();
     // OSD 5 wraps overlays in a div whose id is "overlay-wrapper[–<el.id>]".
     const wrapper = Array.from(document.querySelectorAll('[id^="overlay-wrapper"]'))
-      .find((el) => el.querySelector('.region-overlay'))
+      .find((el) => el.querySelector(sel))
       ?.getBoundingClientRect();
     if (!canvas || !wrapper) return 'left';
     return wrapper.left + wrapper.width / 2 > canvas.left + canvas.width / 2 ? 'right' : 'left';
-  });
+  }, selector);
 }
 
 test('double-page spread: dropdown and tapping select which page plays', async ({ page }) => {
@@ -553,7 +553,7 @@ test('double-page spread: dropdown and tapping select which page plays', async (
   await page.locator('button[title="Toggle double-page"]').click();
   await expect(page.locator('.player-page')).toHaveCount(0, { timeout: 15_000 });
   await expect(page.locator('.region-overlay .staff-region')).toHaveCount(1, { timeout: 30_000 });
-  await expect.poll(() => regionOverlaySide(page)).toBe('right');
+  await expect.poll(() => overlaySide(page, '.region-overlay')).toBe('right');
 
   // Next page in double-page mode: spread [2, 3] — the selector appears.
   await page.locator('button[title="Next page"] >> nth=0').click();
@@ -563,14 +563,14 @@ test('double-page spread: dropdown and tapping select which page plays', async (
   await expect(select).toHaveValue('2');
   // Page 2's TEI: two staff zones, overlay on the left (first) page.
   await expect(page.locator('.region-overlay .staff-region')).toHaveCount(2, { timeout: 30_000 });
-  await expect.poll(() => regionOverlaySide(page)).toBe('left');
+  await expect.poll(() => overlaySide(page, '.region-overlay')).toBe('left');
 
   // Dropdown: play the facing page instead — its TEI loads, three regions,
   // and the overlay moves to the right half of the spread.
   await select.selectOption('3');
   await expect(page.locator('.player-page')).toHaveValue('3');
   await expect(page.locator('.region-overlay .staff-region')).toHaveCount(3, { timeout: 30_000 });
-  await expect.poll(() => regionOverlaySide(page)).toBe('right');
+  await expect.poll(() => overlaySide(page, '.region-overlay')).toBe('right');
 
   // Click the left page: selects it (dropdown follows), overlay back left.
   await page
@@ -579,7 +579,7 @@ test('double-page spread: dropdown and tapping select which page plays', async (
     .click({ position: { x: 219, y: 100 } });
   await expect(page.locator('.player-page')).toHaveValue('2', { timeout: 30_000 });
   await expect(page.locator('.region-overlay .staff-region')).toHaveCount(2, { timeout: 30_000 });
-  await expect.poll(() => regionOverlaySide(page)).toBe('left');
+  await expect.poll(() => overlaySide(page, '.region-overlay')).toBe('left');
 
   // Clicking the already-playing page re-syncs nothing (no fresh TEI fetch).
   const fetchCount = teiFetches.length;
@@ -635,4 +635,96 @@ test('clicking the facing page plays it (mouse)', async ({ page }) => {
   await page.locator('.tify-plugin-dock-btn').click();
   await expect(select).toHaveValue('3', { timeout: 30_000 });
   await expect(page.locator('.region-overlay .staff-region')).toHaveCount(3, { timeout: 30_000 });
+});
+
+test('tempo change during playback reschedules without restart', async ({ page }) => {
+  await interceptOscillators(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  await page.locator('.player-btn').first().click();
+  await page.waitForTimeout(2000);
+  const before = await oscStarts(page);
+  expect(before.length).toBeGreaterThanOrEqual(2);
+  // The fixture is uniform quarter notes, but both staves strike each onset
+  // (identical start times by design) — dedupe simultaneous starts, then
+  // take the median steady gap (the first gap after the change is a
+  // transition fraction, so the median ignores it).
+  const gaps = (starts: Array<{ t: number }>): number[] => {
+    const times: number[] = [];
+    for (const t of starts.map((s) => s.t).sort((a, b) => a - b)) {
+      if (times.length === 0 || t - times[times.length - 1] > 0.01) times.push(t);
+    }
+    const out: number[] = [];
+    for (let i = 1; i < times.length; i++) out.push(times[i] - times[i - 1]);
+    return out.sort((a, b) => a - b);
+  };
+  const median = (values: number[]): number =>
+    values.length === 0 ? 0 : values[Math.floor(values.length / 2)];
+  const beforeGap = median(gaps(before));
+  // 120 BPM: quarter-note onsets 0.5 s apart.
+  expect(beforeGap).toBeGreaterThan(0.45);
+  expect(beforeGap).toBeLessThan(0.55);
+  // Live change: the slider's input event fires setTempo() mid-playback —
+  // no restart, so the scheduled start times keep advancing from where they
+  // were (not from 0) on the faster grid.
+  await setInputValue(page, '#player-tempo', '180');
+  await expect(page.locator('label[for="player-tempo"]')).toHaveText('Tempo: 180');
+  await page.waitForTimeout(1800);
+  const after = await oscStarts(page);
+  expect(after.length).toBeGreaterThan(before.length);
+  expect(after[before.length].t).toBeGreaterThanOrEqual(before[before.length - 1].t);
+  // 180 BPM: quarter-note onsets 1/3 s apart (bounded for timing jitter).
+  const afterGap = median(gaps(after.slice(before.length)));
+  expect(afterGap).toBeGreaterThan(beforeGap * 0.5);
+  expect(afterGap).toBeLessThan(beforeGap * 0.85);
+});
+
+test('resume continues from the paused position', async ({ page }) => {
+  await interceptOscillators(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  await page.locator('.player-btn').first().click();
+  await page.waitForTimeout(2100);
+  await page.locator('.player-btn').nth(1).click();
+  const paused = await oscStarts(page);
+  // Five onsets (beats 0–4) have sounded at 120 BPM; the pause froze the
+  // schedule — no further starts while paused.
+  expect(paused.length).toBeGreaterThanOrEqual(8);
+  await page.waitForTimeout(1200);
+  expect((await oscStarts(page)).length).toBe(paused.length);
+  // Resume: playback continues from the paused beat — the first re-struck
+  // onset is the grid beat after the pause (D4 293.66 Hz or A4 440 Hz,
+  // depending on the exact pause moment), never the restart signature
+  // (beat 0's 392 Hz), and the clock keeps advancing.
+  await page.locator('.player-btn').first().click();
+  await page.waitForTimeout(1500);
+  const resumed = await oscStarts(page);
+  expect(resumed.length).toBeGreaterThan(paused.length);
+  const next = resumed[paused.length];
+  const continued = Math.abs(next.f - 293.66) < 1 || Math.abs(next.f - 440.0) < 1;
+  expect(continued).toBe(true);
+  expect(next.t).toBeGreaterThan(paused[paused.length - 1].t);
+});
+
+test('page border marks the playing page in double-page spreads only', async ({ page }) => {
+  await mockSpread(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  // Single page: no border.
+  await expect(page.locator('.player-page-border')).toHaveCount(0, { timeout: 30_000 });
+  // Double-page spread [2, 3]: the border appears around the selected page
+  // (left half of the spread).
+  await page.locator('button[title="Toggle double-page"]').click();
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  const select = page.locator('.player-page');
+  await expect(select).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.player-page-border')).toHaveCount(1, { timeout: 30_000 });
+  await expect.poll(() => overlaySide(page, '.player-page-border')).toBe('left');
+  // Select the facing page: the border moves right with the selection.
+  await select.selectOption('3');
+  await expect(page.locator('.player-page-border')).toHaveCount(1, { timeout: 30_000 });
+  await expect.poll(() => overlaySide(page, '.player-page-border')).toBe('right');
+  // Back to single-page mode: the border is removed.
+  await page.locator('button[title="Toggle double-page"]').click();
+  await expect(page.locator('.player-page-border')).toHaveCount(0, { timeout: 15_000 });
 });

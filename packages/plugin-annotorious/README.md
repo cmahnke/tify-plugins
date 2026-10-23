@@ -34,7 +34,8 @@ const plugin = await annotoriousPlugin(tify, {
   heavier accent stroke once selected. See the exported `shapeStyle` if you
   want to customize it.
 - Annotorious coordinates are relative to a single base image: in TIFY book
-  view only the first visible page's annotations are shown (noted in the panel).
+  view (double-page spread) the second page's annotations are offset into the
+  shared world space (per the page layout), so both facing pages show shapes.
 
 ## Example
 

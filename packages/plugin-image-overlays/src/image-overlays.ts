@@ -19,11 +19,12 @@ import {
   getManifest,
   getPages,
   onPagesChange,
+  pageLayout,
   waitReady,
 } from '@projektemacher/tify-plugin-core';
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
 import { createTranslator, registerPlugin } from '@projektemacher/tify-plugin-core';
-import type { SidePanel, TifyPlugin } from '@projektemacher/tify-plugin-core';
+import type { PageLayoutEntry, SidePanel, TifyPlugin } from '@projektemacher/tify-plugin-core';
 import { fetchTeiPageCached, type TeiOptions, type TeiWordBox } from './tei';
 
 export interface ImageOverlaysOptions {
@@ -281,6 +282,33 @@ export async function imageOverlaysPlugin(
     return Object.assign(Object.create(Object.getPrototypeOf(center)), { x, y });
   };
 
+  /**
+   * The TiledImage TIFY opened for a page. TIFY tags its tile-source configs
+   * (not the world items), so items are matched by their world placement
+   * (x/y) against the page layout; the cover spread's invisible filler
+   * (opacity 0) is skipped in favor of the visible copy.
+   */
+  const findTiledImage = (
+    viewer: any,
+    rect: { x: number; y: number; width: number; height: number },
+  ): any => {
+    const world = viewer?.world;
+    if (typeof world?.getItemCount !== 'function') return null;
+    const count = world.getItemCount();
+    let fallback: any = null;
+    for (let index = 0; index < count; index++) {
+      const item = world.getItemAt(index);
+      const bounds = item?.getBounds?.();
+      if (!bounds) continue;
+      const near = (a: number, b: number): boolean => Math.abs(a - b) < 0.002;
+      if (near(bounds.x, rect.x) && near(bounds.y, rect.y)) {
+        if ((item.getOpacity?.() ?? 1) > 0) return item;
+        if (fallback === null) fallback = item;
+      }
+    }
+    return fallback;
+  };
+
   const drawMarkers = (pages: number[]): void => {
     const viewer = tify.viewer;
     if (!viewer) return;
@@ -331,50 +359,56 @@ export async function imageOverlaysPlugin(
     }
   };
 
-  const drawTeiBoxes = (boxes: TeiWordBox[]): void => {
+  const drawTeiBoxes = (pages: Array<{ rect: PageLayoutEntry; boxes: TeiWordBox[] }>): void => {
     const viewer = tify.viewer;
-    const tiledImage = viewer?.world?.getItemAt?.(0);
-    if (!viewer || typeof tiledImage?.imageToViewportRectangle !== 'function') return;
+    if (!viewer || typeof viewer.world?.getItemAt !== 'function') return;
     const SVG_NS = 'http://www.w3.org/2000/svg';
-    for (const box of boxes) {
-      const element = document.createElement('div');
-      element.className = 'tify-plugin-tei-word';
-      element.title = box.text;
-      element.tabIndex = 0;
-      element.setAttribute('role', 'button');
-      element.setAttribute('aria-label', box.text);
-      applyWordStyle(element);
-      onTap(element, () => select(box, element));
-      // Word text inside the box, force-fitted via SVG textLength: the
-      // vector scales with the box, so the fit holds at every zoom
-      // without listeners or measurement.
-      const svg = document.createElementNS(SVG_NS, 'svg');
-      svg.setAttribute('viewBox', `0 0 ${box.w} ${box.h}`);
-      svg.setAttribute('preserveAspectRatio', 'none');
-      svg.setAttribute('aria-hidden', 'true');
-      const label = document.createElementNS(SVG_NS, 'text');
-      label.setAttribute('x', '0');
-      label.setAttribute('y', String(box.h * 0.8));
-      label.setAttribute('font-size', String(box.h * 0.8));
-      label.setAttribute('textLength', String(box.w));
-      label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
-      // Halo width rides the viewBox (box.h), so it scales with the box;
-      // the halo itself comes from the shared style.css (paint-order).
-      label.setAttribute('stroke-width', String(box.h * 0.06));
-      label.textContent = box.text;
-      svg.append(label);
-      element.append(svg);
-      const rect = tiledImage.imageToViewportRectangle(box.x, box.y, box.w, box.h);
-      // Top-left anchored box: Point location + viewport-unit size.
-      const location = makePoint(viewer, rect.x, rect.y);
-      if (!location) return;
-      viewer.addOverlay({
-        element,
-        location,
-        width: rect.width,
-        height: rect.height,
-      });
-      elements.push(element);
+    for (const { rect, boxes } of pages) {
+      // The TiledImage TIFY opened for this page carries the page's world
+      // placement, so its imageToViewportRectangle maps canvas pixels
+      // directly onto the spread (no manual offset math).
+      const tiledImage = findTiledImage(viewer, rect);
+      if (!tiledImage) continue;
+      for (const box of boxes) {
+        const element = document.createElement('div');
+        element.className = 'tify-plugin-tei-word';
+        element.title = box.text;
+        element.tabIndex = 0;
+        element.setAttribute('role', 'button');
+        element.setAttribute('aria-label', box.text);
+        applyWordStyle(element);
+        onTap(element, () => select(box, element));
+        // Word text inside the box, force-fitted via SVG textLength: the
+        // vector scales with the box, so the fit holds at every zoom
+        // without listeners or measurement.
+        const svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${box.w} ${box.h}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('aria-hidden', 'true');
+        const label = document.createElementNS(SVG_NS, 'text');
+        label.setAttribute('x', '0');
+        label.setAttribute('y', String(box.h * 0.8));
+        label.setAttribute('font-size', String(box.h * 0.8));
+        label.setAttribute('textLength', String(box.w));
+        label.setAttribute('lengthAdjust', 'spacingAndGlyphs');
+        // Halo width rides the viewBox (box.h), so it scales with the box;
+        // the halo itself comes from the shared style.css (paint-order).
+        label.setAttribute('stroke-width', String(box.h * 0.06));
+        label.textContent = box.text;
+        svg.append(label);
+        element.append(svg);
+        const rect = tiledImage.imageToViewportRectangle(box.x, box.y, box.w, box.h);
+        // Top-left anchored box: Point location + viewport-unit size.
+        const location = makePoint(viewer, rect.x, rect.y);
+        if (!location) return;
+        viewer.addOverlay({
+          element,
+          location,
+          width: rect.width,
+          height: rect.height,
+        });
+        elements.push(element);
+      }
     }
   };
 
@@ -390,10 +424,26 @@ export async function imageOverlaysPlugin(
         if (manifestUrl !== '') {
           const manifest = await getManifest(tify);
           if (token !== drawToken || disposed) return;
-          const teiPage = await fetchTeiPageCached(manifest, manifestUrl, pages[0], teiOpts);
+          // Every visible page of a spread gets its own TEI (and boxes);
+          // the page layout places each set on its page.
+          const layouts = pageLayout(tify, manifest);
+          const loaded = await Promise.all(
+            pages.map(async (page) => ({
+              page,
+              rect: layouts.find((entry) => entry.page === page) ?? null,
+              boxes:
+                (await fetchTeiPageCached(manifest, manifestUrl, page, teiOpts))?.boxes ?? null,
+            })),
+          );
           if (token !== drawToken || disposed) return;
-          if (teiPage && teiPage.boxes.length > 0) {
-            drawTeiBoxes(teiPage.boxes);
+          const drawable: Array<{ rect: PageLayoutEntry; boxes: TeiWordBox[] }> = [];
+          for (const entry of loaded) {
+            if (entry.rect !== null && entry.boxes !== null && entry.boxes.length > 0) {
+              drawable.push({ rect: entry.rect, boxes: entry.boxes });
+            }
+          }
+          if (drawable.length > 0) {
+            drawTeiBoxes(drawable);
             pageHasBoxes = true;
             if (panel) panel.status.textContent = t('TEI word boxes');
             renderReadout();

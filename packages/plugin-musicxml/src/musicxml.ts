@@ -23,7 +23,9 @@ import {
   getPages,
   getVisiblePages,
   onPagesChange,
+  pageLayout,
   waitReady,
+  type PageLayoutEntry,
   type SidePanel,
   type TifyPlugin,
 } from '@projektemacher/tify-plugin-core';
@@ -74,6 +76,14 @@ export interface MusicXmlOptions {
   showHighlights?: boolean;
   /** Persistent staff-region overlay on the scan (default on, #ff6400, 25% fill). */
   regionOverlay?: RegionOverlayOptions;
+  /**
+   * 1 px outline around the page being played, in double-page spreads only
+   * (default color #008cff, the playback-blue; decorative, no toggle).
+   */
+  pageBorder?: {
+    /** Outline color, hex '#rrggbb' (default '#008cff'). */
+    color?: string;
+  };
 }
 
 export interface MusicXmlPlugin extends TifyPlugin {
@@ -85,8 +95,7 @@ const MUSICXML_FORMAT = 'application/vnd.recordare.musicxml+xml';
 const TEI_FORMAT = 'application/tei+xml';
 const DEFAULT_REGION_COLOR = '#ff6400';
 const DEFAULT_REGION_OPACITY = 0.25;
-/** TIFY's page gap in double-page mode (ViewMedia.vue gapBetweenPages). */
-const GAP_BETWEEN_PAGES = 0.005;
+const DEFAULT_PAGE_BORDER_COLOR = '#008cff';
 
 /** '#rrggbb' (with or without '#') -> [r, g, b]; null when malformed. */
 function hexToRgb(hex: string): [number, number, number] | null {
@@ -326,63 +335,6 @@ function canvasLabel(canvas: any): string | null {
   return null;
 }
 
-/** Viewing-direction traits TIFY's page layout follows (plugins have no store access). */
-function viewingDirectionOf(manifest: any): { vertical: boolean; reversed: boolean } {
-  const direction = String(manifest?.viewingDirection ?? '');
-  return {
-    vertical: direction === 'top-to-bottom' || direction === 'bottom-to-top',
-    reversed: direction === 'right-to-left' || direction === 'bottom-to-top',
-  };
-}
-
-/** One shown page's rect in viewport coordinates (units of the first page's size). */
-interface PageLayoutEntry {
-  page: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-/**
- * Where TIFY draws each shown page: replicate the viewer's own layout math
- * (ViewMedia.vue initViewer/updateOverlays) from the manifest alone — pages
- * side by side in units of the first shown page's size with a small gap,
- * mirrored for right-to-left/bottom-to-top viewing directions. Page 0 (the
- * blank filler facing the cover) reuses page 1's canvas, mirroring TIFY.
- */
-function pageLayout(tify: Tify, manifest: any): PageLayoutEntry[] {
-  const shown = getPages(tify).filter((page) => page > -1);
-  if (shown.length === 0) return [];
-  const { vertical, reversed } = viewingDirectionOf(manifest);
-  const canvases = canvasesOf(manifest);
-  const sizeOf = (page: number): number => {
-    const canvas = canvases[(page === 0 ? 1 : page) - 1];
-    return Number(canvas?.[vertical ? 'height' : 'width'] ?? 0) || 1;
-  };
-  const firstSize = sizeOf(shown[0]);
-  const layouts: PageLayoutEntry[] = [];
-  let offset = 0;
-  for (const [index, page] of shown.entries()) {
-    if (index > 0) {
-      offset += (GAP_BETWEEN_PAGES + sizeOf(shown[index - 1]) / firstSize) * (reversed ? -1 : 1);
-    }
-    if (page === 0) continue;
-    const canvas = canvases[page - 1];
-    const width = Number(canvas?.width ?? 0);
-    const height = Number(canvas?.height ?? 0);
-    if (!(width > 0) || !(height > 0)) continue;
-    layouts.push({
-      page,
-      x: vertical ? 0 : offset,
-      y: vertical ? offset : 0,
-      width: width / firstSize,
-      height: height / firstSize,
-    });
-  }
-  return layouts;
-}
-
 export async function musicxmlPlugin(
   tify: Tify,
   options: MusicXmlOptions,
@@ -418,10 +370,14 @@ export async function musicxmlPlugin(
   let selectedPage: number | null = null;
   /** Shown-page rects at the last sync (click hit-testing; pages fingerprint guards staleness). */
   let layoutCache: { pages: string; layouts: PageLayoutEntry[] } | null = null;
+  /** Border overlay around the playing page (double-page spreads); torn down by clear(). */
+  let removePageBorder: (() => void) | null = null;
 
   const clear = (): void => {
     teardown?.();
     teardown = null;
+    removePageBorder?.();
+    removePageBorder = null;
     panel.body.innerHTML = '';
     panel.status.textContent = '';
   };
@@ -481,6 +437,24 @@ export async function musicxmlPlugin(
 
       const pageData = pageScore(manifest, manifestUrl, current);
       const pageRect = layouts.find((layout) => layout.page === current) ?? null;
+
+      // 1 px outline around the page being played — double-page spreads
+      // only (single-page mode has nothing to distinguish). Decorative
+      // mirror of the panel's Page selection; torn down on every re-sync.
+      if (pages.length > 1 && pageRect) {
+        const border = document.createElement('div');
+        border.className = 'player-page-border';
+        border.style.setProperty(
+          '--page-border-color',
+          hexToRgb(options.pageBorder?.color ?? DEFAULT_PAGE_BORDER_COLOR)
+            ? (options.pageBorder?.color ?? DEFAULT_PAGE_BORDER_COLOR)
+            : DEFAULT_PAGE_BORDER_COLOR,
+        );
+        // Purely decorative visualization of the panel state.
+        border.setAttribute('aria-hidden', 'true');
+        removePageBorder = addViewportOverlay(tify.viewer, border, pageRect);
+      }
+
       // The TEI is one fetch carrying both the staff geometry and the score.
       const teiSource =
         (typeof options.tei === 'function' ? options.tei(current) : options.tei) ??
@@ -591,11 +565,13 @@ export async function musicxmlPlugin(
     const controls = document.createElement('div');
     controls.className = 'player-controls';
 
-    const tempoLabel = document.createElement('span');
+    const tempoLabel = document.createElement('label');
     tempoLabel.className = 'player-tempo';
+    tempoLabel.htmlFor = 'player-tempo';
 
     const tempo = document.createElement('input');
     tempo.type = 'range';
+    tempo.id = 'player-tempo';
     tempo.min = '60';
     tempo.max = '180';
     tempo.value = '120';
@@ -1149,7 +1125,6 @@ export async function musicxmlPlugin(
       player.setTempo(parseInt(tempo.value, 10) || 120);
       paintTempo();
     });
-
     panel.status.textContent = '';
     teardown = () => {
       player.dispose();

@@ -129,6 +129,17 @@
   justify-content: center;
 }
 
+/* 1 px outline around the page being played (double-page spreads only).
+   Outline (not border): OSD sizes the overlay in device px on every draw, so
+   the hairline keeps its width at any zoom; outline never shifts the
+   element's box. Sits above the score (z-index 1) and staff overlays (2). */
+.player-page-border {
+  pointer-events: none;
+  z-index: 3;
+  outline: 1px solid var(--page-border-color, #008cff);
+  outline-offset: -1px;
+}
+
 .player-page {
   font-size: 0.8rem;
   padding: 0.15rem 0.25rem;

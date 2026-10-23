@@ -6,8 +6,9 @@
 // our (translated) side panel.
 //
 // Scope limits (v1):
-// - Annotorious coordinates are relative to ONE base image, so in TIFY book
-//   view only the first visible page's annotations are shown (noted in panel).
+// - Annotorious coordinates are relative to ONE base image: in TIFY book
+//   view (double-page spread) the second page's annotations are offset into
+//   the shared world space via the page layout, so both pages show shapes.
 // - Whole-canvas targets, SVG selectors and non-xywh shapes are skipped.
 // - Annotorious renders on WebGL: without a usable context (e.g. headless
 //   browsers without software GL) the plugin degrades to panel-only mode —
@@ -23,10 +24,13 @@ import '@annotorious/openseadragon/annotorious-openseadragon.css';
 import { shapeStyle } from './shape-style';
 import type Tify from 'tify';
 import {
+  canvasesOf,
   getManifest,
   getVisiblePages,
   getXywhAnnotations,
+  pageLayout,
   summarizeBodies,
+  xywhOf,
 } from '@projektemacher/tify-plugin-core';
 import {
   createTranslator,
@@ -127,6 +131,40 @@ function highlight(entries: RowEntry[], id: string | null): void {
   }
 }
 
+/** The `xywh` numbers of a normalized W3C annotation target, if any. */
+function targetFragmentOf(annotation: any): { x: number; y: number; w: number; h: number } | null {
+  const raw = annotation?.target;
+  if (typeof raw === 'string') return xywhOf(raw.slice(raw.indexOf('#xywh=') + 1));
+  const value = raw?.selector?.value;
+  if (typeof value === 'string') return xywhOf(value);
+  return null;
+}
+
+/** Rewrites an annotation target's `xywh` fragment with new numbers. */
+function withXywh(target: unknown, x: number, y: number, w: number, h: number): unknown {
+  const round = (v: number): number => Math.round(v * 1000) / 1000;
+  const replacement = `xywh=${round(x)},${round(y)},${round(w)},${round(h)}`;
+  if (typeof target === 'string') {
+    const at = target.indexOf('#xywh=');
+    return at >= 0 ? `${target.slice(0, at)}#${replacement}` : target;
+  }
+  if (target && typeof target === 'object') {
+    const node = target as Record<string, any>;
+    const selector = node.selector;
+    if (selector && typeof selector === 'object' && typeof selector.value === 'string') {
+      return { ...node, selector: { ...selector, value: replacement } };
+    }
+    if (typeof node.source === 'string') {
+      const at = node.source.indexOf('#xywh=');
+      return {
+        ...node,
+        source: at >= 0 ? `${node.source.slice(0, at)}#${replacement}` : node.source,
+      };
+    }
+  }
+  return target;
+}
+
 export async function annotoriousPlugin(
   tify: Tify,
   options: AnnotoriousOptions = {},
@@ -208,23 +246,68 @@ export async function annotoriousPlugin(
     try {
       const manifest = await getManifest(tify);
       if (disposed) return;
-      const { annotations } = await getXywhAnnotations(manifest, pages[0]);
+      // Both facing pages in a spread: annotations of the second page are
+      // offset into the shared world space (Annotorious has one coordinate
+      // space; TIFY lays the pages side by side).
+      const loaded = await Promise.all(pages.map((page) => getXywhAnnotations(manifest, page)));
       if (disposed) return;
+      const layouts = pageLayout(tify, manifest);
+      // Annotorious's world space is in image pixels of the base content:
+      // content units = viewport units * contentFactor, and contentFactor
+      // equals the first page's canvas size along the layout axis (every
+      // item spans width/firstSize viewport units).
+      const first = layouts[0];
+      const canvases = canvasesOf(manifest);
+      const firstCanvas = canvases[(first?.page ?? 1) - 1];
+      const factor = Number(firstCanvas?.width ?? 0) || 1;
       const parsed: ImageAnnotation[] = [];
       const next: RowEntry[] = [];
-      annotations.forEach((w3cAnnotation, index) => {
-        try {
-          const result = w3c.parse(w3cAnnotation);
-          if (!result.parsed) return;
-          parsed.push(result.parsed);
-          const summary = summarizeBodies(
-            w3cAnnotation,
-            t('Annotation {index}', { index: index + 1 }),
-          );
-          next.push({ parsed: result.parsed, summary, row: null });
-        } catch {
-          // Skip annotations the adapter cannot parse.
-        }
+      loaded.forEach(({ annotations }, pageIndex) => {
+        const page = pages[pageIndex];
+        // First shown page sits at the world origin; later pages are offset
+        // by their layout x/y converted to content pixels.
+        const layout = layouts.find((entry) => entry.page === page);
+        const pageCanvas = canvases[page - 1];
+        const pageW = Number(pageCanvas?.width ?? 0) || 1;
+        const pageH = Number(pageCanvas?.height ?? 0) || 1;
+        const base =
+          layout && first
+            ? {
+                x: (layout.x - first.x) * factor,
+                y: (layout.y - first.y) * factor,
+              }
+            : { x: 0, y: 0 };
+        const scaleX = factor / pageW;
+        const scaleY = factor / pageH;
+        annotations.forEach((w3cAnnotation, index) => {
+          try {
+            const fragment = targetFragmentOf(w3cAnnotation);
+            if (!fragment) return;
+            const offset = {
+              ...w3cAnnotation,
+              // Rewrite the fragment: shift x/y into the spread's shared
+              // world space (content pixels) and rescale so the shape's
+              // size matches the page's footprint in that space.
+              target: withXywh(
+                w3cAnnotation.target,
+                base.x + fragment.x * scaleX,
+                base.y + fragment.y * scaleY,
+                fragment.w * scaleX,
+                fragment.h * scaleY,
+              ),
+            };
+            const result = w3c.parse(offset);
+            if (!result.parsed) return;
+            parsed.push(result.parsed);
+            const summary = summarizeBodies(
+              w3cAnnotation,
+              t('Annotation {index}', { index: index + 1 }),
+            );
+            next.push({ parsed: result.parsed, summary, row: null });
+          } catch {
+            // Skip annotations the adapter cannot parse.
+          }
+        });
       });
       // Drop rendered state only once the replacement is ready. NB: the
       // silent sync path (below) also removes annotations that are gone, so
@@ -239,9 +322,7 @@ export async function annotoriousPlugin(
         renderRows(t, tbody, entries, anno);
       }
       if (panel) {
-        const note =
-          pages.length > 1 ? ` · ${t('Showing annotations for the first page only')}` : '';
-        panel.status.textContent = `${t('{count} annotations', { count: entries.length })}${note}`;
+        panel.status.textContent = t('{count} annotations', { count: entries.length });
       }
     } catch {
       if (panel) panel.status.textContent = t('Could not load annotations');

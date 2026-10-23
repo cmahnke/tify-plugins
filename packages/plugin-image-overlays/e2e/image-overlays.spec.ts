@@ -2,7 +2,13 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MOCK_BASE, buildManifest, mockIiif } from '../../../e2e/helpers';
+import { MOCK_BASE, buildInfo, buildManifest, mockIiif } from '../../../e2e/helpers';
+
+/** Minimal valid JPEG served for tile requests the spread mock needs. */
+const TILE_JPEG_BYTES = Buffer.from(
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkIDRENDg8RDxAQCgsSExIRDxAREhP/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==',
+  'base64',
+);
 
 const EXAMPLE = '/packages/plugin-image-overlays/example/';
 
@@ -178,4 +184,100 @@ test('draws TEI word boxes from a v2 canvas seeAlso', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   const words = page.locator('.tify-plugin-tei-word');
   await expect.poll(() => words.count()).toBeGreaterThan(0);
+});
+
+const GOTTINGEN =
+  'https://iiif.io/api/image/3.0/example/reference/918ecd18c2592080851777620de9bcb5-gottingen';
+
+/** Three-canvas manifest whose every canvas seeAlsoes the same TEI fixture. */
+function teiSpreadManifest(): object {
+  const canvas = (page: number): object => ({
+    id: `${MOCK_BASE}/canvas/p${page}`,
+    type: 'Canvas',
+    label: { en: [`Page ${page}`] },
+    width: 4032,
+    height: 3024,
+    seeAlso: [
+      {
+        id: `${MOCK_BASE}/tei/tei.xml`,
+        type: 'Dataset',
+        format: 'application/tei+xml',
+        label: { en: ['TEI transcription with word coordinates'] },
+      },
+    ],
+    items: [
+      {
+        id: `${MOCK_BASE}/page/p${page}/1`,
+        type: 'AnnotationPage',
+        items: [
+          {
+            id: `${MOCK_BASE}/annotation/p${page}-image`,
+            type: 'Annotation',
+            motivation: 'painting',
+            body: {
+              id: `${GOTTINGEN}/full/max/0/default.jpg`,
+              type: 'Image',
+              format: 'image/jpeg',
+              width: 4032,
+              height: 3024,
+              service: [{ id: GOTTINGEN, type: 'ImageService3', profile: 'level2' }],
+            },
+            target: `${MOCK_BASE}/canvas/p${page}`,
+          },
+        ],
+      },
+    ],
+  });
+  return {
+    '@context': 'http://iiif.io/api/presentation/3/context.json',
+    id: `${MOCK_BASE}/manifest.json`,
+    type: 'Manifest',
+    label: { en: ['Mock TEI Spread'] },
+    items: [1, 2, 3].map(canvas),
+  };
+}
+
+test('double-page spread draws word boxes on both facing pages', async ({ page }) => {
+  await mockIiif(page, { manifest: teiSpreadManifest() });
+  // The spread manifest references the TEI fixture and the Göttingen image
+  // service directly; mockIiif only routes those for its own fixture case.
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const tei = readFileSync(path.join(here, '../../../e2e/fixtures/tei.xml'), 'utf8');
+  await page.route(`${MOCK_BASE}/tei/tei.xml`, (route) =>
+    route.fulfill({ body: tei, contentType: 'application/xml' }),
+  );
+  await page.route(`${GOTTINGEN}/**`, (route) => {
+    const url = route.request().url();
+    if (url.endsWith('/info.json') || url.replace(/\/$/, '') === GOTTINGEN) {
+      // Consistent with the manifest canvas (4032×3024): boxes scaled to
+      // canvas pixels then map 1:1 through the TiledImage.
+      const info = buildInfo() as Record<string, unknown>;
+      return route.fulfill({
+        json: { ...info, id: GOTTINGEN, width: 4032, height: 3024 },
+      });
+    }
+    return route.fulfill({ body: TILE_JPEG_BYTES, contentType: 'image/jpeg' });
+  });
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await page.locator('button[title="Toggle double-page"]').click();
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  // Both facing pages reference the same TEI → 5 boxes per page.
+  const words = page.locator('.tify-plugin-tei-word');
+  await expect(words).toHaveCount(10, { timeout: 15_000 });
+  // Half the boxes sit on each half of the spread (page layout offsets).
+  const sides = await page.evaluate(() => {
+    const canvas = document.querySelector('#tify canvas')?.getBoundingClientRect();
+    if (!canvas) return { left: 0, right: 0 };
+    const middle = canvas.left + canvas.width / 2;
+    let left = 0;
+    let right = 0;
+    for (const el of document.querySelectorAll('.tify-plugin-tei-word')) {
+      const box = el.getBoundingClientRect();
+      if (box.left + box.width / 2 < middle) left += 1;
+      else right += 1;
+    }
+    return { left, right };
+  });
+  expect(sides.left).toBe(5);
+  expect(sides.right).toBe(5);
 });

@@ -21,6 +21,10 @@ import '@projektemacher/tify-plugin-core/style.css';
   (`sequences`/`@id`, `otherContent`, OA `on`/`resources`) and 3
   (`items`/`id`) are both accepted wherever cheap, as is the Presentation 4
   2D subset (v4 adds 3D Scenes, out of scope).
+- **Page layout** — `pageLayout(tify, manifest)`: where TIFY draws each shown
+  page (replicating the viewer's layout math for double-page spreads,
+  viewing directions included) — the shared basis for per-page overlays in
+  the spread-aware plugins.
 - **Feature detection** — `describeManifest`, `describeCanvas`,
   `describeImageFeatures`: which plugin-relevant features the manifest and
   image service advertise (IIIF versions, TEI/annotation/score links, HDR/C2PA
@@ -29,7 +33,8 @@ import '@projektemacher/tify-plugin-core/style.css';
   load path (`getManifest`, `getInfoJson`) warns when a detected feature has
   no loaded plugin; see below.
 - **Info panel** — `infoPanelPlugin`: lists those features for the current
-  page, docked or beside the viewer. Needs no sibling plugin package.
+  page (one section per facing page in double-page spreads), docked or beside
+  the viewer. Needs no sibling plugin package.
 - **Dock** — `dockPanel()` with `DOCK_ICONS`; see below.
 - **i18n** — `createTranslator`, `applyStaticTranslations`; see below.
 - **Styles** — `@projektemacher/tify-plugin-core/style.css` (panel skeleton,
@@ -91,7 +96,8 @@ const plugin = await infoPanelPlugin(tify, {
 Lists the plugin-relevant features of the current page: Presentation version
 and canvas count, linked TEI transcriptions (canvas or manifest level),
 annotations (embedded or by reference), MusicXML scores, plus the image
-service's API version, profile, and HDR/C2PA advertisement. Presence-only:
+service's API version, profile, and HDR/C2PA advertisement. In double-page
+spreads the panel renders one feature section per facing page. Presence-only:
 linked files are never fetched and nothing is verified — the panel works
 with core alone. The pure detectors are also exported for reuse
 (`describeManifest`, `describeCanvas`, `describeImageFeatures`).

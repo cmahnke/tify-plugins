@@ -154,6 +154,37 @@ export function buildManifest({ canvases = 3, annotations = 0 }: ManifestOptions
         },
       ];
     }
+    if (page === 2 && annotations > 0) {
+      // Facing-page annotations for spread tests (same style, canvas 2).
+      canvas.annotations = [
+        {
+          id: `${MOCK_BASE}/annotations/p2.json`,
+          type: 'AnnotationPage',
+          items: Array.from({ length: annotations }, (_, a) => ({
+            id: `${MOCK_BASE}/annotation/anno-p2-${a + 1}`,
+            type: 'Annotation',
+            motivation: 'tagging',
+            body: { type: 'TextualBody', value: `Page 2 Note ${a + 1}`, format: 'text/plain' },
+            target: `${MOCK_BASE}/canvas/p2#xywh=${50 + a * 300},100,200,150`,
+          })),
+        },
+      ];
+    }
+    if (page === 3 && annotations > 0) {
+      canvas.annotations = [
+        {
+          id: `${MOCK_BASE}/annotations/p3.json`,
+          type: 'AnnotationPage',
+          items: Array.from({ length: annotations }, (_, a) => ({
+            id: `${MOCK_BASE}/annotation/anno-p3-${a + 1}`,
+            type: 'Annotation',
+            motivation: 'tagging',
+            body: { type: 'TextualBody', value: `Page 3 Note ${a + 1}`, format: 'text/plain' },
+            target: `${MOCK_BASE}/canvas/p3#xywh=${50 + a * 300},100,200,150`,
+          })),
+        },
+      ];
+    }
     return canvas;
   });
   return {

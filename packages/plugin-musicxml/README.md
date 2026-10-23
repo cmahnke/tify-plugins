@@ -26,15 +26,16 @@ manifest discovery below; a plain string applies to every page),
 raw XML, or per-page resolver — wins over the TEI-embedded score),
 `showScoreOverlay?` (default `true`),
 `showHighlights?` (default `true`), `regionOverlay?: { enabled?, color?,
-opacity? }` (default off, `#ff6400`, 25% alpha).
+opacity? }` (default off, `#ff6400`, 25% alpha), `pageBorder?: { color? }`
+(default color `#008cff`).
 
 ## Double-page spreads
 
 When TIFY shows two pages at once (double-page mode), the panel gains a
 **Page** dropdown listing the shown pages — the played page can be switched
-there. Tapping or clicking one of the shown pages plays that page too
-(deliberately without any visual indicator; the dropdown selection and the
-reloaded panel are the only feedback). The score, staff regions and
+there. Tapping or clicking one of the shown pages plays that page too; the
+1 px outline around the played page, the dropdown selection and the
+reloaded panel are the feedback. The score, staff regions and
 playback highlights are placed on the selected page's scan either way.
 
 The panel mirrors the
@@ -49,6 +50,30 @@ integrated alpha slider; the slider's track runs transparent → the picked
 color) that colors fill and
 border of the persistent staff-region overlay alike. Every control carries
 a translated tooltip.
+
+In double-page spreads a 1 px outline marks the page being played
+(`pageBorder.color`, default playback-blue) — it follows the Page dropdown
+and tap selection and is removed in single-page mode.
+
+## Playback details
+
+- The MusicXML is parsed into a note timeline, tracking `<print new-system>`
+  to assign notes to physical staff systems.
+- A played note maps to page coordinates using the staff grid: X by the
+  note's time position across the system, Y by pitch mapped onto the staff
+  lines (clef-aware). The marker radius scales with the detected staff line
+  spacing so it matches note-head size on the scan.
+- Audio is synthesized with the Web Audio API, so no soundfont files are
+  required. Notes schedule on the exact musical grid; the firing timer only
+  drives the UI callbacks, so audio stays on the beat under main-thread
+  jitter.
+- The tempo slider takes effect immediately during playback: the player
+  derives the currently sounding beat from the audio clock, drops its
+  pending timers and reschedules the remaining notes on the new grid
+  (notes already sounding ring out naturally). Pausing remembers the beat
+  and resuming continues from there.
+- OSMD's playback cursor advances one voice entry (onset) per step,
+  including rests, which are not in the timeline.
 
 ## Manifest format
 
@@ -71,21 +96,6 @@ used as a fallback: playback works, but nothing is mapped onto the scan (no
 aligned score, no staff regions). Without any score reference the panel
 reports that the page has no score; playback needs no image at all (an
 explicit `musicxml` URL or XML string suffices).
-
-## Playback details
-
-- The MusicXML is parsed into a note timeline, tracking `<print new-system>`
-  to assign notes to physical staff systems.
-- A played note maps to page coordinates using the staff grid: X by the
-  note's time position across the system, Y by pitch mapped onto the staff
-  lines (clef-aware). The marker radius scales with the detected staff line
-  spacing so it matches note-head size on the scan.
-- Audio is synthesized with the Web Audio API, so no soundfont files are
-  required. Notes schedule on the exact musical grid; the firing timer only
-  drives the UI callbacks, so audio stays on the beat under main-thread
-  jitter.
-- OSMD's playback cursor advances one voice entry (onset) per step,
-  including rests, which are not in the timeline.
 
 ## Sanitizing invalid MusicXML
 

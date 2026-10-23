@@ -8,7 +8,7 @@ const IMAGE = { width: 750, height: 1000 };
 const ANNO_CENTER = { x: 150, y: 175 };
 
 test.beforeEach(async ({ page }) => {
-  await mockIiif(page, { manifest: buildManifest({ canvases: 2, annotations: 2 }) });
+  await mockIiif(page, { manifest: buildManifest({ canvases: 3, annotations: 2 }) });
 });
 
 /**
@@ -321,3 +321,58 @@ function featureManifest(): object {
   };
   return manifest;
 }
+
+test('double-page spread shows annotations from both facing pages', async ({ page }) => {
+  test.setTimeout(90_000);
+  if (!(await webglAvailable(page))) {
+    test.skip(true, 'no WebGL: annotorious cannot draw shapes');
+  }
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
+    timeout: 15_000,
+  });
+  // buildManifest attaches 2 annotations to each canvas; single-page view
+  // shows page 1's only.
+  await page.locator('button[title="Toggle double-page"]').click();
+  // Cover spread: only page 1 is real → still page 1's two annotations.
+  await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
+    timeout: 15_000,
+  });
+  // Next: spread [2,3] — both facing pages contribute their own two
+  // annotations ("Page 2/3 Note N").
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  await expect(page.locator('.tify-plugin-status')).toContainText('4 annotations', {
+    timeout: 15_000,
+  });
+  const rows = page.locator('#panel tbody tr');
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toContainText('Page 2 Note 1');
+  await expect(rows.nth(2)).toContainText('Page 3 Note 1');
+  // The facing page's shapes are offset into the world's shared space:
+  // clicking page 3's first shape (center at canvas px 150,175) selects its
+  // row. Home view: the spread spans 2.005 × 1000/750 viewport units.
+  await expect(page.locator('.tify-loading')).toBeHidden({ timeout: 15_000 });
+  const SPREAD = { w: 2.005, h: 1000 / 750 };
+  const point = async (): Promise<{ x: number; y: number }> => {
+    const box = await page.locator('canvas.a9s-gl-canvas').boundingBox();
+    if (!box) throw new Error('annotorious display canvas missing');
+    const unit = Math.min(box.width / SPREAD.w, box.height / SPREAD.h);
+    const ox = (box.width - SPREAD.w * unit) / 2;
+    const oy = (box.height - SPREAD.h * unit) / 2;
+    // Page 3 sits at layout x 1.005 (first-page units); annotation 1 at
+    // canvas px 50,100,200,150 → center 150,175.
+    return {
+      x: box.x + ox + (1.005 + 150 / 750) * unit,
+      y: box.y + oy + (175 / 750 / 1) * unit,
+    };
+  };
+  await expect
+    .poll(async () => {
+      const p = await point();
+      await page.mouse.move(p.x, p.y, { steps: 5 });
+      await page.mouse.down();
+      await page.mouse.up();
+      return page.locator('#panel tbody tr').nth(2).getAttribute('aria-current');
+    })
+    .toBe('true');
+});

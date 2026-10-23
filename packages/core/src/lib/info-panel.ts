@@ -66,11 +66,14 @@ function renderManifestTable(
   host: HTMLElement,
   manifest: any | null,
   page: number,
+  heading: string | null = null,
 ): void {
   host.innerHTML = '';
-  const heading = document.createElement('h3');
-  heading.textContent = t('Manifest');
-  host.append(heading);
+  if (heading) {
+    const h3 = document.createElement('h3');
+    h3.textContent = heading;
+    host.append(h3);
+  }
   const table = document.createElement('table');
   const tbody = document.createElement('tbody');
   if (!manifest) {
@@ -129,6 +132,26 @@ function renderImageFeatures(
   host.append(table);
 }
 
+/** Image-service features of one page, fetched and rendered into `host`. */
+async function renderPageImageFeatures(
+  t: TranslateFn,
+  host: HTMLElement,
+  manifest: any | null,
+  canvas: any | undefined,
+  page: number,
+): Promise<void> {
+  if (!manifest || !canvas?.serviceId) {
+    renderImageFeatures(t, host, null, page);
+    return;
+  }
+  try {
+    const info = await getInfoJson(canvas.serviceId);
+    renderImageFeatures(t, host, info, page);
+  } catch {
+    renderImageFeatures(t, host, null, page);
+  }
+}
+
 export async function infoPanelPlugin(tify: Tify, options: InfoPanelOptions): Promise<InfoPlugin> {
   await waitReady(tify);
   const de = (
@@ -173,24 +196,38 @@ export async function infoPanelPlugin(tify: Tify, options: InfoPanelOptions): Pr
     if (!manifest) {
       panel.status.textContent = t('Manifest unreachable');
     }
-    renderManifestTable(t, manifestBody, manifest, pages[0] ?? 1);
     if (!manifest || pages.length === 0) {
-      renderImageFeatures(t, imageBody, null, null);
+      renderManifestTable(t, manifestBody, manifest, pages[0] ?? 1, t('Manifest'));
+      renderImageFeatures(t, imageBody, null, pages.length === 0 ? null : pages[0]);
       return;
     }
-    const canvases = listCanvases(manifest);
-    const canvas = canvases[pages[0] - 1];
-    if (!canvas?.serviceId) {
-      renderImageFeatures(t, imageBody, null, pages[0]);
-      return;
+    // Both facing pages of a spread get their own feature tables; single
+    // pages keep the unheaded layout.
+    const multi = pages.length > 1;
+    manifestBody.innerHTML = '';
+    imageBody.innerHTML = '';
+    for (const page of pages) {
+      const pageBody = document.createElement('div');
+      manifestBody.append(pageBody);
+      renderManifestTable(
+        t,
+        pageBody,
+        manifest,
+        page,
+        multi ? t('Page {page}', { page }) : t('Manifest'),
+      );
+      if (!multi) {
+        const canvas = listCanvases(manifest)[page - 1];
+        await renderPageImageFeatures(t, imageBody, manifest, canvas, page);
+      }
     }
-    try {
-      const info = await getInfoJson(canvas.serviceId);
-      if (disposed) return;
-      renderImageFeatures(t, imageBody, info, pages[0]);
-    } catch {
-      if (disposed) return;
-      renderImageFeatures(t, imageBody, null, pages[0]);
+    if (!multi) return;
+    // Spreads: one combined image-service section per page, sequential.
+    for (const page of pages) {
+      const canvas = listCanvases(manifest)[page - 1];
+      const pageBody = document.createElement('div');
+      imageBody.append(pageBody);
+      await renderPageImageFeatures(t, pageBody, manifest, canvas, page);
     }
   };
 

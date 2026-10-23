@@ -207,6 +207,14 @@ export function xywhFragmentOf(target: unknown): string | null {
   return null;
 }
 
+/** `xywh=x,y,w,h` → numbers; null for malformed/percent fragments. */
+export function xywhOf(fragment: string): { x: number; y: number; w: number; h: number } | null {
+  const m = /^xywh=(?:(?:pixel):)?([\d.]+),([\d.]+),([\d.]+),([\d.]+)$/.exec(fragment.trim());
+  if (!m) return null;
+  const [x, y, w, h] = m.slice(1).map(Number);
+  return { x, y, w, h };
+}
+
 /**
  * Annotatable items of a 1-based page: non-painting annotations whose target
  * resolves to an `xywh` fragment (whole-canvas targets and SVG selectors are
@@ -285,4 +293,70 @@ export function summarizeBodies(annotation: any, fallback: string): string {
 /** Current 1-based visible pages (positive only). */
 export function getVisiblePages(tify: Tify): number[] {
   return getPages(tify).filter((page) => page > 0);
+}
+
+/** Viewing-direction traits TIFY's page layout follows. */
+export interface ViewingDirection {
+  vertical: boolean;
+  reversed: boolean;
+}
+
+/** Viewing-direction traits of a manifest (v3 `viewingDirection`, v2 fallbacks). */
+export function viewingDirectionOf(manifest: any): ViewingDirection {
+  const direction = String(manifest?.viewingDirection ?? manifest?.viewingHint ?? '');
+  return {
+    vertical: direction === 'top-to-bottom' || direction === 'bottom-to-top',
+    reversed: direction === 'right-to-left' || direction === 'bottom-to-top',
+  };
+}
+
+/** One shown page's rect in viewport coordinates (units of the first page's size). */
+export interface PageLayoutEntry {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** TIFY's page gap in double-page mode (ViewMedia.vue gapBetweenPages). */
+export const GAP_BETWEEN_PAGES = 0.005;
+
+/**
+ * Where TIFY draws each shown page: replicate the viewer's own layout math
+ * (ViewMedia.vue initViewer/updateOverlays) from the manifest alone — pages
+ * side by side in units of the first shown page's size with a small gap,
+ * mirrored for right-to-left/bottom-to-top viewing directions. Page 0 (the
+ * blank filler facing the cover) reuses page 1's canvas, mirroring TIFY.
+ */
+export function pageLayout(tify: Tify, manifest: any): PageLayoutEntry[] {
+  const shown = getPages(tify).filter((page) => page > -1);
+  if (shown.length === 0) return [];
+  const { vertical, reversed } = viewingDirectionOf(manifest);
+  const canvases = canvasesOf(manifest);
+  const sizeOf = (page: number): number => {
+    const canvas = canvases[(page === 0 ? 1 : page) - 1];
+    return Number(canvas?.[vertical ? 'height' : 'width'] ?? 0) || 1;
+  };
+  const firstSize = sizeOf(shown[0]);
+  const layouts: PageLayoutEntry[] = [];
+  let offset = 0;
+  for (const [index, page] of shown.entries()) {
+    if (index > 0) {
+      offset += (GAP_BETWEEN_PAGES + sizeOf(shown[index - 1]) / firstSize) * (reversed ? -1 : 1);
+    }
+    if (page === 0) continue;
+    const canvas = canvases[page - 1];
+    const width = Number(canvas?.width ?? 0);
+    const height = Number(canvas?.height ?? 0);
+    if (!(width > 0) || !(height > 0)) continue;
+    layouts.push({
+      page,
+      x: vertical ? 0 : offset,
+      y: vertical ? offset : 0,
+      width: width / firstSize,
+      height: height / firstSize,
+    });
+  }
+  return layouts;
 }

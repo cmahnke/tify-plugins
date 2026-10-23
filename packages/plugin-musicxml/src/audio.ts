@@ -94,10 +94,22 @@ export interface PlaybackCallbacks {
   onEnd?: () => void;
 }
 
+/** Small tolerance for beat comparisons (float beat positions). */
+const BEAT_EPS = 1e-6;
+/** Lead-in before the first grid time (context resume, timer setup). */
+const LEAD_IN = 0.05;
+
 /**
  * Simple Web Audio playback engine. Drives the note timeline and fires
  * `onNote` at each note onset so the UI can highlight it (score + scan).
- * Plays one or two tracks (staves) at once, each with its own instrument.
+ * Plays one or more tracks (staves) at once, each with its own instrument.
+ *
+ * The playback position is tracked in beats: `fromBeat` is the beat that
+ * sounds at context time `baseTime`, and every grid time derives from that
+ * anchor at the current tempo. `setTempo()` mid-playback re-anchors at the
+ * currently playing beat and reschedules the remaining notes — the change is
+ * audible immediately without restarting the piece. `pause()` remembers the
+ * beat; `play()` resumes from there.
  */
 export class MusicPlayer {
   private timeline: MusicTimeline;
@@ -107,16 +119,18 @@ export class MusicPlayer {
   private playing = false;
   private tempo = 120;
   private tracks: TrackConfig[] = [{ staff: 1, instrument: 'piano' }];
-  private startedAt = 0;
-  private pausedAt = 0;
+  /** Beat that sounds at context time `baseTime` (moving anchor). */
+  private fromBeat = 0;
   private baseTime = 0;
+  /** Beat paused at (0 = start from the beginning). */
+  private pausedBeat = 0;
   private cb: PlaybackCallbacks = {};
   /**
    * Restart generation: a scheduled setTimeout callback may already sit in
-   * the task queue when stop()/play() reschedule (e.g. instrument or track
-   * switch under load) — clearing it is then too late. Callbacks capture
-   * the generation and stay silent unless it is still current, so stale
-   * audio and highlights can never leak into the restarted playback.
+   * the task queue when stop()/play()/setTempo() reschedule (e.g. instrument
+   * or track switch under load) — clearing it is then too late. Callbacks
+   * capture the generation and stay silent unless it is still current, so
+   * stale audio and highlights can never leak into the restarted playback.
    */
   private epoch = 0;
 
@@ -124,8 +138,28 @@ export class MusicPlayer {
     this.timeline = timeline;
   }
 
+  /**
+   * Set the playback tempo (BPM). While playing, the change takes effect
+   * immediately: the current beat is derived from the audio clock, pending
+   * timers are dropped and the remaining notes are rescheduled on the new
+   * grid — notes already sounding ring out naturally.
+   */
   setTempo(bpm: number): void {
-    this.tempo = bpm;
+    const next = Number.isFinite(bpm) && bpm > 0 ? bpm : 120;
+    if (next === this.tempo) return;
+    if (!this.playing || !this.ctx) {
+      this.tempo = next;
+      return;
+    }
+    const nowBeat = this.beatNow();
+    this.epoch += 1;
+    for (const id of this.timeouts) window.clearTimeout(id);
+    this.timeouts = [];
+    this.tempo = next;
+    // No lead-in on a live change: the current beat continues sounding now.
+    this.fromBeat = nowBeat;
+    this.baseTime = this.ctx.currentTime;
+    this.scheduleFrom(nowBeat, this.epoch);
   }
 
   /** Schedule notes of the given tracks; identical staffs are deduplicated. */
@@ -148,8 +182,20 @@ export class MusicPlayer {
     return this.playing;
   }
 
+  /** Seconds between two beats at the current tempo. */
   private beatToSeconds(beats: number): number {
     return (60 / this.tempo) * beats;
+  }
+
+  /** Context time at which the given absolute beat sounds. */
+  private secOf(beat: number): number {
+    return this.baseTime + this.beatToSeconds(beat - this.fromBeat);
+  }
+
+  /** The beat sounding right now (meaningful while playing). */
+  private beatNow(): number {
+    if (!this.ctx) return this.fromBeat;
+    return this.fromBeat + ((this.ctx.currentTime - this.baseTime) * this.tempo) / 60;
   }
 
   private ensureContext(): AudioContext {
@@ -159,7 +205,6 @@ export class MusicPlayer {
       this.master.gain.value = 0.3;
       this.master.connect(this.ctx.destination);
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
     return this.ctx;
   }
 
@@ -168,14 +213,13 @@ export class MusicPlayer {
     return midiToFreq(midi);
   }
 
-  private playTone(freq: number, at: number, durSec: number, instrument: Instrument): void {
+  private playTone(freq: number, t0: number, durSec: number, instrument: Instrument): void {
     const ctx = this.ensureContext();
     if (!this.master) return;
     const voice = VOICES[instrument];
-    // Start on the exact musical grid time (baseTime + beat offset), not at
-    // "now": the firing setTimeout only drives the UI callbacks, so the audio
-    // stays on the beat even when the main thread jitters.
-    const t0 = this.baseTime + at;
+    // t0 is the exact musical grid time on the audio clock, not "now": the
+    // firing setTimeout only drives the UI callbacks, so the audio stays on
+    // the beat even when the main thread jitters.
     const peak = 0.55 / Math.max(1, voice.mix.length * 0.6);
     const atk = t0 + voice.attack;
     const dec = Math.max(atk + 0.01, Math.min(atk + voice.decay, t0 + durSec));
@@ -226,19 +270,15 @@ export class MusicPlayer {
     }
   }
 
-  play(): void {
-    if (this.playing) return;
+  /**
+   * Schedule every note onset at or after `startBeat` (plus the end-of-piece
+   * timer) on the current tempo grid. Only future onsets are scheduled: a
+   * mid-piece resume or tempo change must never re-strike notes already
+   * played (their oscillators exist only after their timer fired, so nothing
+   * else needs cancelling).
+   */
+  private scheduleFrom(startBeat: number, epoch: number): void {
     const ctx = this.ensureContext();
-    this.playing = true;
-    this.epoch++;
-    const epoch = this.epoch;
-    // Small lead-in so a still-resuming context has its clock running before
-    // the first grid time is reached.
-    this.baseTime = ctx.currentTime + 0.05;
-    const now = performance.now();
-    this.startedAt = now - this.pausedAt;
-    this.pausedAt = 0;
-
     let absBeat = 0;
     // OMR output occasionally contains artifact notes: zero-duration notes
     // and repeated notes at the same position. Both would fire at the same
@@ -252,46 +292,79 @@ export class MusicPlayer {
         const track = this.tracks.find((t) => t.staff === n.staff);
         if (!track) continue;
         const onBeat = Math.max(0, absBeat + n.beatStart);
+        if (onBeat < startBeat - BEAT_EPS) continue;
         const key = `${String(track.staff)}:${String(Math.round(onBeat * 1000))}`;
         if (scheduledBeats.has(key)) continue;
         scheduledBeats.add(key);
-        const atSec = this.beatToSeconds(onBeat);
+        const atSec = this.secOf(onBeat);
         const durSec = Math.max(0.12, this.beatToSeconds(n.durationDiv / this.timeline.divisions));
         const index = this.timeline.notes.indexOf(n);
-        const id = window.setTimeout(() => {
-          if (!this.playing || epoch !== this.epoch) return;
-          this.playTone(this.noteToFreq(n), atSec, durSec, track.instrument);
-          this.cb.onNote?.(n, index);
-        }, atSec * 1000);
+        const id = window.setTimeout(
+          () => {
+            if (!this.playing || epoch !== this.epoch) return;
+            this.playTone(this.noteToFreq(n), atSec, durSec, track.instrument);
+            this.cb.onNote?.(n, index);
+          },
+          Math.max(0, (atSec - ctx.currentTime) * 1000),
+        );
         this.timeouts.push(id);
       }
       absBeat += measure.beats;
     }
 
-    const totalSec = this.beatToSeconds(absBeat) * 1000;
-    const endId = window.setTimeout(() => {
-      if (epoch !== this.epoch) return;
-      this.stop();
-      this.cb.onEnd?.();
-    }, totalSec + 200);
+    const endId = window.setTimeout(
+      () => {
+        if (epoch !== this.epoch) return;
+        this.stop();
+        this.cb.onEnd?.();
+      },
+      Math.max(0, (this.secOf(absBeat) - ctx.currentTime) * 1000) + 200,
+    );
     this.timeouts.push(endId);
+  }
+
+  play(): void {
+    if (this.playing) return;
+    const ctx = this.ensureContext();
+    this.playing = true;
+    this.epoch += 1;
+    const epoch = this.epoch;
+    // Resume a paused playback from the paused beat; a fresh start begins at 0.
+    const resumeBeat = this.pausedBeat;
+    this.pausedBeat = 0;
+    const start = (): void => {
+      // stop() may have won the race against the pending resume.
+      if (!this.playing || epoch !== this.epoch) return;
+      this.baseTime = ctx.currentTime + LEAD_IN;
+      this.fromBeat = resumeBeat;
+      this.scheduleFrom(resumeBeat, epoch);
+    };
+    // Resuming a suspended context must await the resume: the clock is
+    // frozen until then, so the grid anchor would drift if set early. A
+    // resume() also cancels a suspend() that is still in flight (rapid
+    // pause → play).
+    if (resumeBeat > 0 || ctx.state === 'suspended') {
+      void ctx.resume().then(start, start);
+    } else {
+      start();
+    }
   }
 
   pause(): void {
     if (!this.playing) return;
+    this.pausedBeat = this.beatNow();
     this.playing = false;
-    this.pausedAt = performance.now() - this.startedAt;
     for (const id of this.timeouts) window.clearTimeout(id);
     this.timeouts = [];
     if (this.ctx) void this.ctx.suspend();
   }
 
   stop(): void {
-    this.epoch++;
+    this.epoch += 1;
     this.playing = false;
     for (const id of this.timeouts) window.clearTimeout(id);
     this.timeouts = [];
-    this.pausedAt = 0;
+    this.pausedBeat = 0;
   }
 
   dispose(): void {

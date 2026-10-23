@@ -236,3 +236,18 @@ test('german panel chrome (?lang=de)', async ({ page }) => {
   await expect(page.locator('#panel')).toContainText('Bilddienst');
   await expect(row(page, 'TEI-Transkription')).toContainText('nein');
 });
+
+test('double-page spread lists both facing pages', async ({ page }) => {
+  await mockIiif(page, { manifest: buildManifest({ canvases: 3 }) });
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await page.locator('button[title="Toggle double-page"]').click();
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  await expect(page.locator('#panel')).toContainText('Viewing pages 2, 3', { timeout: 15_000 });
+  // Per-page sections: one manifest table and one image-service table each.
+  await expect(page.locator('#panel h3').filter({ hasText: /^Page [23]$/ })).toHaveCount(2);
+  await expect(page.locator('#panel h3').filter({ hasText: 'Image service (page' })).toHaveCount(2);
+  // Each page's canvas features come from its own canvas.
+  await expect(page.locator('#panel')).toContainText('Image service (page 2)');
+  await expect(page.locator('#panel')).toContainText('Image service (page 3)');
+});

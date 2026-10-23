@@ -18,7 +18,9 @@ When the current canvas references a TEI transcription page-level via
 word boxes from `<facsimile>` zones linked via `@facs` are drawn instead of
 demo markers. Surface coordinates scale to canvas pixels automatically;
 surfaces match canvases via `<graphic url>`, then `<pb>` order, then
-position. Display-only (hover shows the word, no clicks).
+position. Display-only (hover shows the word, no clicks). In double-page
+spreads every facing page draws its own TEI's boxes, mapped through the
+TiledImage TIFY opened for that page.
 
 ```ts
 const plugin = await imageOverlaysPlugin(tify, {
