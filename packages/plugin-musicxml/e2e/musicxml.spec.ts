@@ -723,6 +723,63 @@ test('plays on a virtual clock without a working AudioContext', async ({ page })
   });
 });
 
+test('plays when the AudioContext never starts running', async ({ page }) => {
+  // CI Firefox failure mode: the context constructs, but the audio backend is
+  // dead — currentTime stays frozen and resume() never settles.
+  await page.addInitScript(() => {
+    const StuckCtx = class {
+      state = 'suspended';
+      currentTime = 0;
+      sampleRate = 48000;
+      destination = {};
+      resume() {
+        return new Promise<void>(() => {});
+      }
+      suspend() {
+        return Promise.resolve();
+      }
+      close() {
+        return Promise.resolve();
+      }
+      createGain() {
+        return {
+          gain: {
+            value: 0,
+            setValueAtTime() {},
+            exponentialRampToValueAtTime() {},
+          },
+          connect() {},
+        };
+      }
+      createBiquadFilter() {
+        return { type: '', frequency: { value: 0 }, connect() {} };
+      }
+      createOscillator() {
+        return {
+          type: '',
+          frequency: { value: 0 },
+          connect() {},
+          start() {},
+          stop() {},
+          onended: null,
+          disconnect() {},
+        };
+      }
+    };
+    Object.assign(window, { AudioContext: StuckCtx });
+  });
+  await interceptOscillators(page);
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await openPlayer(page);
+  await page.locator('.player-btn').first().click();
+  await expect(page.locator('.staff-current').first()).toHaveAttribute('visibility', 'visible', {
+    timeout: 15_000,
+  });
+  const starts = await oscStarts(page);
+  expect(starts.length).toBeGreaterThanOrEqual(2);
+  expect(starts[0].w).toBe('triangle');
+});
+
 test('page border marks the playing page in double-page spreads only', async ({ page }) => {
   await mockSpread(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);

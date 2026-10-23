@@ -98,6 +98,15 @@ export interface PlaybackCallbacks {
 const BEAT_EPS = 1e-6;
 /** Lead-in before the first grid time (context resume, timer setup). */
 const LEAD_IN = 0.05;
+/** How long play() waits for a suspended context to resume before virtual-clock playback. */
+const RESUME_WATCHDOG_MS = 250;
+
+/** Promise that resolves after `ms` — loses the race once resume() settles first. */
+function watchdog(ms: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 /**
  * Simple Web Audio playback engine. Drives the note timeline and fires
@@ -116,6 +125,7 @@ export class MusicPlayer {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private deadAudio = false;
+  private frozenAudio = false;
   private fallbackBase = 0;
   private fallbackOffset = 0;
   private timeouts: number[] = [];
@@ -201,7 +211,7 @@ export class MusicPlayer {
   }
 
   private now(): number {
-    if (this.ctx) return this.ctx.currentTime;
+    if (this.ctx && !this.frozenAudio) return this.ctx.currentTime;
     return this.fallbackOffset + (performance.now() - this.fallbackBase) / 1000;
   }
 
@@ -357,11 +367,37 @@ export class MusicPlayer {
     // frozen until then, so the grid anchor would drift if set early. A
     // resume() also cancels a suspend() that is still in flight (rapid
     // pause → play).
-    if (this.deadAudio) {
+    if (this.deadAudio || this.frozenAudio) {
+      this.fallbackOffset = 0;
       this.fallbackBase = performance.now();
       start();
-    } else if (resumeBeat > 0 || ctx?.state === 'suspended') {
-      void ctx?.resume().then(start, start);
+    } else if (ctx && (resumeBeat > 0 || ctx.state === 'suspended')) {
+      // A context may construct fine yet never start running (no audio
+      // device on CI runners): its resume() then never settles, so race it
+      // against a watchdog and fall back to the virtual clock — the context
+      // itself stays usable as a silent oscillator factory.
+      let resumed: Promise<void>;
+      try {
+        resumed = ctx.resume();
+      } catch {
+        resumed = Promise.reject();
+      }
+      void Promise.race([resumed, watchdog(RESUME_WATCHDOG_MS)]).then(
+        () => {
+          if (!this.playing || epoch !== this.epoch) return;
+          if (ctx.state !== 'running') {
+            this.frozenAudio = true;
+            this.fallbackBase = performance.now();
+          }
+          start();
+        },
+        () => {
+          if (!this.playing || epoch !== this.epoch) return;
+          this.frozenAudio = true;
+          this.fallbackBase = performance.now();
+          start();
+        },
+      );
     } else {
       start();
     }
@@ -373,7 +409,7 @@ export class MusicPlayer {
     this.playing = false;
     for (const id of this.timeouts) window.clearTimeout(id);
     this.timeouts = [];
-    if (this.deadAudio) {
+    if (this.deadAudio || this.frozenAudio) {
       this.fallbackOffset += (performance.now() - this.fallbackBase) / 1000;
     } else if (this.ctx) {
       void this.ctx.suspend();
