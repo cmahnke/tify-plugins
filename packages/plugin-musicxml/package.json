@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
-    "linkedom": "^0.18.14"
+    "linkedom": "^0.18.15"
   },
   "peerDependencies": {
     "tify": "0.36.2"
