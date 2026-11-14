@@ -102,7 +102,7 @@ jobs:
         run: |
           NAME=$(node -p "require('./package.json').name")
           VERSION=$(node -p "require('./package.json').version")
-          OUT=$(npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org 2>&1) || true
+          OUT=$(npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org --loglevel=error 2>&1) || true
           if [ "$OUT" = "$VERSION" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           elif echo "$OUT" | grep -q "E404"; then
