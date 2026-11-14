@@ -47,7 +47,7 @@
     "opensheetmusicdisplay": "^2.2.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "linkedom": "^0.18.15"
   },
   "peerDependencies": {
