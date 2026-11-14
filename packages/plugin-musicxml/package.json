@@ -43,7 +43,7 @@
     "lint": "eslint . && prettier --check src example e2e scripts package.json README.md"
   },
   "dependencies": {
-    "@projektemacher/tify-plugin-core": "^0.2.0",
+    "@projektemacher/tify-plugin-core": "^0.3.0",
     "opensheetmusicdisplay": "^2.2.1"
   },
   "devDependencies": {

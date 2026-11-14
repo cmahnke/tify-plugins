@@ -39,7 +39,7 @@
     "lint": "eslint . && prettier --check src example e2e package.json README.md"
   },
   "dependencies": {
-    "@projektemacher/tify-plugin-core": "^0.2.0",
+    "@projektemacher/tify-plugin-core": "^0.3.0",
     "@contentauth/c2pa-web": "^0.16.1"
   },
   "peerDependencies": {

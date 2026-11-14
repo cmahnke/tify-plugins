@@ -58,12 +58,13 @@ function trackRequests(page: Page, pattern: RegExp): { count: () => number } {
   return { count: () => urls.length };
 }
 
-/** Headless browsers without software GL cannot boot the WebGL map. */
-async function webglAvailable(page: Page): Promise<boolean> {
+/** Headless browsers without software GL cannot boot the map (WebGL2 only:
+    MapLibre v6 does not fall back to WebGL 1). */
+async function webgl2Available(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     try {
       const canvas = document.createElement('canvas');
-      return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+      return Boolean(canvas.getContext('webgl2'));
     } catch {
       return false;
     }
@@ -86,12 +87,15 @@ test('docks a places panel listing the manifest places', async ({ page }) => {
   await expect(page.locator('#panel .navplace-row')).toHaveCount(2);
   await expect(page.locator('.navplace-row-label').first()).toHaveText('Göttingen');
   await expect(page.locator('.navplace-row-label').nth(1)).toHaveText('Berlin');
-  await expect(page.locator('#panel .tify-plugin-status')).toHaveText('');
-  // The map itself boots only with WebGL; the panel works without it.
-  if (await webglAvailable(page)) {
+  // With WebGL2 the map boots and the status clears; without it the plugin
+  // degrades gracefully — the rows stay, the status explains the missing map.
+  if (await webgl2Available(page)) {
+    await expect(page.locator('#panel .tify-plugin-status')).toHaveText('');
     await expect(page.locator('.navplace-map .maplibregl-canvas')).toBeVisible({
       timeout: 20_000,
     });
+  } else {
+    await expect(page.locator('#panel .tify-plugin-status')).toContainText('Map unavailable');
   }
 });
 
@@ -131,14 +135,14 @@ test('the basemap style is configurable', async ({ page }) => {
     `${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}` +
       `&style=${encodeURIComponent('https://maps.example.test/style.json')}`,
   );
-  if (await webglAvailable(page)) {
+  if (await webgl2Available(page)) {
     await expect(page.locator('.navplace-map .maplibregl-canvas')).toBeVisible({
       timeout: 20_000,
     });
   }
   // The custom style replaced the OpenFreeMap default (which the panel
   // would otherwise fetch once the map boots).
-  if (await webglAvailable(page)) {
+  if (await webgl2Available(page)) {
     await expect.poll(() => custom.count()).toBeGreaterThan(0);
     await expect.poll(() => openfreemap.count()).toBe(0);
   }

@@ -31,8 +31,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm i
+      # Per-package typecheck resolves the core through node_modules, so its
+      # declarations must exist first (catches cross-package type drift that
+      # the root typecheck cannot see — it maps workspaces to their sources).
+      - run: npm run build --workspace @projektemacher/tify-plugin-core
       - run: npm run lint --workspace @projektemacher/tify-plugin-${{ matrix.package }}
       - run: npm run test:i18n --workspace @projektemacher/tify-plugin-${{ matrix.package }}
+      - run: npm run typecheck --workspace @projektemacher/tify-plugin-${{ matrix.package }}
 
   app:
     name: demo app (lint, typecheck, i18n, tei, build, docs)
@@ -44,6 +49,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm i
+      # npm silently installs published copies of workspace packages when a
+      # range no longer matches (caret on 0.x pins the minor) — catch it
+      # before anything builds against stale code.
+      - run: npm run test:links
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:i18n
