@@ -1,0 +1,20 @@
+{
+  "$language": "Deutsch",
+  "← all examples": "← alle Beispiele",
+  "Code example": "Codebeispiel",
+  "Documentation": "Dokumentation",
+  "Fly to this place": "Diesen Ort auf der Karte zeigen",
+  "IIIF manifest URL": "IIIF-Manifest-URL",
+  "Load": "Laden",
+  "Loading map…": "Karte wird geladen …",
+  "Loading places…": "Orte werden geladen …",
+  "Map unavailable: {error}": "Karte nicht verfügbar: {error}",
+  "navPlace — tify-plugins": "navPlace — tify-plugins",
+  "No places in this manifest": "Keine Orte in diesem Manifest",
+  "Place {n}": "Ort {n}",
+  "Places": "Orte",
+  "Places from the IIIF navPlace extension on a configurable vector-tile map.": "Orte aus der IIIF-Erweiterung navPlace auf einer konfigurierbaren Vektor-Kachelkarte.",
+  "Places map": "Ortskarte",
+  "Places panel": "Orte-Bereich",
+  "Places unavailable: {error}": "Orte nicht verfügbar: {error}"
+}

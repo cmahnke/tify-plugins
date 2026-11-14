@@ -7,10 +7,10 @@
 // register themselves to silence their own warning; the registry is
 // refcounted because plugins are destroyed and re-created on reloads.
 import { canvasesOf } from './iiif';
-import { describeCanvas, describeImageFeatures } from './features';
+import { describeCanvas, describeImageFeatures, describeManifest } from './features';
 
 /** Plugin packages that consume a detected feature (npm name suffix). */
-export type PluginId = 'image-overlays' | 'annotorious' | 'musicxml' | 'hdr' | 'c2pa';
+export type PluginId = 'image-overlays' | 'annotorious' | 'musicxml' | 'hdr' | 'c2pa' | 'navplace';
 
 const MODULE_OF: Record<PluginId, string> = {
   'image-overlays': '@projektemacher/tify-plugin-image-overlays',
@@ -18,6 +18,7 @@ const MODULE_OF: Record<PluginId, string> = {
   musicxml: '@projektemacher/tify-plugin-musicxml',
   hdr: '@projektemacher/tify-plugin-hdr',
   c2pa: '@projektemacher/tify-plugin-c2pa',
+  navplace: '@projektemacher/tify-plugin-navplace',
 };
 
 /** What each plugin handles, for the warning text. */
@@ -27,6 +28,7 @@ const HANDLES: Record<PluginId, string> = {
   musicxml: 'MusicXML score',
   hdr: 'HDR',
   c2pa: 'C2PA provenance',
+  navplace: 'navPlace places',
 };
 
 const refcount = new Map<PluginId, number>();
@@ -91,6 +93,10 @@ export function missingPluginsForManifest(manifest: any): Array<[PluginId, strin
     }
     if (features.annotations !== 'none') (wanted.annotorious ??= []).push(`page ${page}`);
     if (features.musicXml) (wanted.musicxml ??= []).push(`page ${page}`);
+    if (features.navPlace) (wanted.navplace ??= []).push(`page ${page}`);
+  }
+  if (describeManifest(manifest).navPlace) {
+    (wanted.navplace ??= []).unshift('manifest');
   }
   for (const [id, pages] of Object.entries(wanted)) {
     if (refcount.has(id as PluginId)) continue;

@@ -16,6 +16,7 @@ const workspaceAliases: Array<[string, string]> = [
   [`${scope}/tify-plugin-c2pa`, 'packages/plugin-c2pa/src/index.ts'],
   [`${scope}/tify-plugin-annotorious`, 'packages/plugin-annotorious/src/index.ts'],
   [`${scope}/tify-plugin-musicxml`, 'packages/plugin-musicxml/src/index.ts'],
+  [`${scope}/tify-plugin-navplace`, 'packages/plugin-navplace/src/index.ts'],
 ];
 
 // Each workspace ships its own example under packages/*/example/.
@@ -43,6 +44,10 @@ export default defineConfig(({ command }) => ({
             {
               find: `${scope}/tify-plugin-musicxml/musicxml.css`,
               replacement: resolve(root, 'packages/plugin-musicxml/src/musicxml.css'),
+            },
+            {
+              find: `${scope}/tify-plugin-navplace/navplace.css`,
+              replacement: resolve(root, 'packages/plugin-navplace/src/navplace.css'),
             },
             ...workspaceAliases.map(([find, replacement]) => ({
               find,

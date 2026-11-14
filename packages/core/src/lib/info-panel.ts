@@ -61,6 +61,12 @@ function annotationsValue(t: TranslateFn, annotations: AnnotationLink): string {
   return t('no');
 }
 
+function navPlaceValue(t: TranslateFn, manifest: boolean, canvas: boolean): string {
+  if (canvas) return t('yes (canvas)');
+  if (manifest) return t('yes (manifest)');
+  return t('no');
+}
+
 function renderManifestTable(
   t: TranslateFn,
   host: HTMLElement,
@@ -82,6 +88,7 @@ function renderManifestTable(
     addRow(tbody, t('TEI transcription'), t('unknown'));
     addRow(tbody, t('Annotations'), t('unknown'));
     addRow(tbody, t('MusicXML score'), t('unknown'));
+    addRow(tbody, t('navPlace'), t('unknown'));
   } else {
     const described = describeManifest(manifest);
     const canvas = describeCanvas(manifest, page);
@@ -94,6 +101,7 @@ function renderManifestTable(
     addRow(tbody, t('TEI transcription'), teiValue(t, canvas.tei));
     addRow(tbody, t('Annotations'), annotationsValue(t, canvas.annotations));
     addRow(tbody, t('MusicXML score'), t(canvas.musicXml ? 'yes' : 'no'));
+    addRow(tbody, t('navPlace'), navPlaceValue(t, described.navPlace, canvas.navPlace));
   }
   table.append(tbody);
   host.append(table);

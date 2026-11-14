@@ -27,6 +27,9 @@ export const DOCK_ICONS = {
   /** Eighth note (score). */
   music:
     '<ellipse cx="9" cy="17" rx="3" ry="2.4" transform="rotate(-20 9 17)"/><path d="M11.6 16.6V5.5L20 3.6v2L13.4 7v9.6z"/>',
+  /** Globe with meridians (navPlace map). */
+  globe:
+    '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2c1.9 0 3.5 3.6 3.7 8H8.3C8.5 7.6 10.1 4 12 4zM6.2 8a8 8 0 0 1 2.2-3.2A11.7 11.7 0 0 0 6.3 8h-.1zm-.8 2h1.9a16 16 0 0 0 0 4H5.4a8 8 0 0 1 0-4zm.8 6h.1a11.7 11.7 0 0 0 2.1 3.2A8 8 0 0 1 6.2 16zm2.1-6h7.4a14.2 14.2 0 0 1 0 4H8.3a14.2 14.2 0 0 1 0-4zm9.7 0h1.9a8 8 0 0 1 0 4h-1.9a16 16 0 0 0 0-4zm-.8-2h-.1a11.7 11.7 0 0 0-2.1-3.2A8 8 0 0 1 17.8 8zM12 20c-1.9 0-3.5-3.6-3.7-8h7.4c-.2 4.4-1.8 8-3.7 8zm3.6-2.8a8 8 0 0 0 2.2-3.2h.1a11.7 11.7 0 0 1-2.2 3.2z"/>',
 } as const;
 
 export type DockMode = boolean | 'auto';

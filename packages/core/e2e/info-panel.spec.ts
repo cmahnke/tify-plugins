@@ -16,6 +16,7 @@ test('lists manifest and image features of a plain v3 book', async ({ page }) =>
   await expect(row(page, 'TEI transcription')).toContainText('no');
   await expect(row(page, 'Annotations')).toContainText('no');
   await expect(row(page, 'MusicXML score')).toContainText('no');
+  await expect(row(page, 'navPlace')).toContainText('no');
   await expect(row(page, 'API version')).toContainText('3');
   await expect(row(page, 'HDR advertised')).toContainText('no');
   await expect(row(page, 'C2PA advertised')).toContainText('no');
@@ -91,6 +92,44 @@ test('detects canvas-level TEI, embedded annotations, and a score', async ({ pag
   await expect(row(page, 'TEI transcription')).toContainText('yes (canvas)');
   await expect(row(page, 'Annotations')).toContainText('embedded');
   await expect(row(page, 'MusicXML score')).toContainText('yes');
+});
+
+function navPlaceManifest(): object {
+  const feature = (label: string, lng: number, lat: number) => ({
+    type: 'Feature',
+    properties: { label: { en: [label] } },
+    geometry: { type: 'Point', coordinates: [lng, lat] },
+  });
+  const manifest = buildManifest({ canvases: 2 }) as any;
+  // Manifest-level navPlace (page 1 shows this).
+  manifest.navPlace = {
+    type: 'FeatureCollection',
+    features: [feature('Göttingen', 9.938, 51.533)],
+  };
+  // Page 2 carries its own FeatureCollection.
+  manifest.items[1].navPlace = {
+    type: 'FeatureCollection',
+    features: [feature('Hamburg', 9.993, 53.551)],
+  };
+  return manifest;
+}
+
+test('detects navPlace on the manifest and on canvases', async ({ page }) => {
+  await mockIiif(page, { manifest: navPlaceManifest() });
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await expect(row(page, 'navPlace')).toContainText('yes (manifest)');
+  await page.locator('button[title="Next page"] >> nth=0').click();
+  await expect(page.locator('#panel')).toContainText('Viewing page 2');
+  await expect(row(page, 'navPlace')).toContainText('yes (canvas)');
+});
+
+test('detects a referenced navPlace FeatureCollection (no features)', async ({ page }) => {
+  const manifest = buildManifest({ canvases: 1 }) as any;
+  manifest.navPlace = { id: `${MOCK_BASE}/places.geojson`, type: 'FeatureCollection' };
+  await mockIiif(page, { manifest });
+  await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
+  await expect(row(page, 'navPlace')).toContainText('yes (manifest)');
 });
 
 test('detects manifest-level TEI and by-reference annotations', async ({ page }) => {
@@ -235,6 +274,7 @@ test('german panel chrome (?lang=de)', async ({ page }) => {
   );
   await expect(page.locator('#panel')).toContainText('Bilddienst');
   await expect(row(page, 'TEI-Transkription')).toContainText('nein');
+  await expect(row(page, 'navPlace')).toContainText('nein');
 });
 
 test('double-page spread lists both facing pages', async ({ page }) => {

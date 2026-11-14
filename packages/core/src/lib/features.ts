@@ -21,11 +21,27 @@ export interface ManifestDescription {
   version: PresentationVersion;
   /** Number of canvases in display order (Scene containers excluded). */
   canvasCount: number;
+  /** Manifest carries a navPlace property (navPlace extension). */
+  navPlace: boolean;
+}
+
+/**
+ * Presence of a navPlace property (navPlace extension): a FeatureCollection
+ * object, embedded or referenced ({id, type} without features). Lenient —
+ * any object with a FeatureCollection type (or features) counts.
+ */
+export function hasNavPlace(resource: any): boolean {
+  const navPlace = resource?.navPlace;
+  if (!navPlace || typeof navPlace !== 'object' || Array.isArray(navPlace)) return false;
+  if (Array.isArray(navPlace.features)) return true;
+  return String(navPlace.type ?? '') === 'FeatureCollection';
 }
 
 /** IIIF Presentation version + canvas count (best effort, never throws). */
 export function describeManifest(manifest: any): ManifestDescription {
-  if (!manifest || typeof manifest !== 'object') return { version: 'unknown', canvasCount: 0 };
+  if (!manifest || typeof manifest !== 'object') {
+    return { version: 'unknown', canvasCount: 0, navPlace: false };
+  }
   const context = JSON.stringify(manifest['@context'] ?? '');
   const items = manifest?.items;
   const sequences = manifest?.sequences;
@@ -36,7 +52,7 @@ export function describeManifest(manifest: any): ManifestDescription {
   } else if (Array.isArray(sequences) || context.includes('/presentation/2')) {
     version = '2';
   }
-  return { version, canvasCount: canvasesOf(manifest).length };
+  return { version, canvasCount: canvasesOf(manifest).length, navPlace: hasNavPlace(manifest) };
 }
 
 function asList(value: unknown): any[] {
@@ -75,11 +91,18 @@ export interface CanvasFeatures {
   annotations: AnnotationLink;
   /** MusicXML score linked via canvas `rendering`. */
   musicXml: boolean;
+  /** Canvas carries its own navPlace FeatureCollection. */
+  navPlace: boolean;
 }
 
 /** Plugin-relevant features of a 1-based page's canvas (never throws). */
 export function describeCanvas(manifest: any, page: number): CanvasFeatures {
-  const result: CanvasFeatures = { tei: 'none', annotations: 'none', musicXml: false };
+  const result: CanvasFeatures = {
+    tei: 'none',
+    annotations: 'none',
+    musicXml: false,
+    navPlace: false,
+  };
   try {
     const canvas = canvasesOf(manifest)[page - 1];
     if (!canvas || typeof canvas !== 'object') return result;
@@ -100,6 +123,7 @@ export function describeCanvas(manifest: any, page: number): CanvasFeatures {
       result.annotations = 'external';
     }
     if (asList(canvas?.rendering).some(isMusicXmlRef)) result.musicXml = true;
+    result.navPlace = hasNavPlace(canvas);
   } catch {
     // Presence sniffing stays best-effort.
   }

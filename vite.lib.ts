@@ -6,6 +6,10 @@ import dts from 'vite-plugin-dts';
 
 export function defineLib(entry: string, external: (string | RegExp)[] = []) {
   return defineConfig({
+    // Relative asset URLs: emitted worker/asset paths (plugin-navplace's
+    // MapLibre worker) must resolve next to dist/index.js for installed
+    // packages, not against the consuming site's origin root.
+    base: './',
     build: {
       target: 'es2022',
       outDir: 'dist',
@@ -17,6 +21,9 @@ export function defineLib(entry: string, external: (string | RegExp)[] = []) {
       },
       rollupOptions: { external },
     },
+    // ESM workers (plugin-navplace bundles the MapLibre worker via
+    // `?worker&url`; an IIFE worker would fail on its ESM module graph).
+    worker: { format: 'es' },
     plugins: [
       // Don't ship declarations for the translation JSON modules (dts emits
       // orphan .d.ts files for resolveJsonModule imports otherwise).

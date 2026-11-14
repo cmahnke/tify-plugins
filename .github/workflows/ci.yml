@@ -23,6 +23,7 @@ jobs:
           - c2pa
           - annotorious
           - musicxml
+          - navplace
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

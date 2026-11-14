@@ -1,0 +1,68 @@
+/* Map host: the MapLibre container gets a fixed height inside the panel. */
+.navplace-map {
+  position: relative;
+  height: 320px;
+  margin-bottom: 0.75rem;
+  border-radius: 0.4rem;
+  overflow: hidden;
+
+  /* Backdrop while tiles load (matches the OpenFreeMap water tone). */
+  background: #aad3df;
+}
+
+.navplace-map canvas:focus-visible {
+  outline: 2px solid #005f9e;
+  outline-offset: -2px;
+}
+
+/* Place list: label left, coordinates right, whole row is a button. */
+.navplace-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.navplace-list .navplace-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.navplace-list .navplace-row:hover {
+  background: rgb(0 95 158 / 10%);
+}
+
+.navplace-row-label {
+  overflow-wrap: anywhere;
+}
+
+.navplace-row-coords {
+  margin-left: auto;
+  font-family: monospace;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+/* Feature popups: bold label above a muted coordinates line. */
+.navplace-popup strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.navplace-popup-coords {
+  font-family: monospace;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}

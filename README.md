@@ -16,25 +16,27 @@ Each workspace is independently publishable: it carries its own `package.json`,
 README, example, and translations; `npm publish --workspace …` ships only
 `dist/` (plus core's stylesheets) — examples and sources stay dev-only.
 
-| Package                                                                      | npm name                                     | What it does                                              |
-| ---------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------- |
-| [`packages/core`](packages/core/README.md)                                   | `@projektemacher/tify-plugin-core`           | Plugin contract, i18n, IIIF/dock helpers, panel styles    |
-| [`packages/plugin-side-panel`](packages/plugin-side-panel/README.md)         | `@projektemacher/tify-plugin-side-panel`     | Custom metadata panel beside the viewer                   |
-| [`packages/plugin-image-overlays`](packages/plugin-image-overlays/README.md) | `@projektemacher/tify-plugin-image-overlays` | OpenSeadragon overlays synced to pages (TEI word boxes)   |
-| [`packages/plugin-hdr`](packages/plugin-hdr/README.md)                       | `@projektemacher/tify-plugin-hdr`            | HDR canvas status + image service check                   |
-| [`packages/plugin-c2pa`](packages/plugin-c2pa/README.md)                     | `@projektemacher/tify-plugin-c2pa`           | Per-tile C2PA provenance with trust anchors               |
-| [`packages/plugin-annotorious`](packages/plugin-annotorious/README.md)       | `@projektemacher/tify-plugin-annotorious`    | Display-only Annotorious annotations from the manifest    |
-| [`packages/plugin-musicxml`](packages/plugin-musicxml/README.md)             | `@projektemacher/tify-plugin-musicxml`       | Rendered MusicXML score with playback (from the homr TEI) |
+| Package                                                                      | npm name                                     | What it does                                                |
+| ---------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| [`packages/core`](packages/core/README.md)                                   | `@projektemacher/tify-plugin-core`           | Plugin contract, i18n, IIIF/dock helpers, panel styles      |
+| [`packages/plugin-side-panel`](packages/plugin-side-panel/README.md)         | `@projektemacher/tify-plugin-side-panel`     | Custom metadata panel beside the viewer                     |
+| [`packages/plugin-image-overlays`](packages/plugin-image-overlays/README.md) | `@projektemacher/tify-plugin-image-overlays` | OpenSeadragon overlays synced to pages (TEI word boxes)     |
+| [`packages/plugin-hdr`](packages/plugin-hdr/README.md)                       | `@projektemacher/tify-plugin-hdr`            | HDR canvas status + image service check                     |
+| [`packages/plugin-c2pa`](packages/plugin-c2pa/README.md)                     | `@projektemacher/tify-plugin-c2pa`           | Per-tile C2PA provenance with trust anchors                 |
+| [`packages/plugin-annotorious`](packages/plugin-annotorious/README.md)       | `@projektemacher/tify-plugin-annotorious`    | Display-only Annotorious annotations from the manifest      |
+| [`packages/plugin-musicxml`](packages/plugin-musicxml/README.md)             | `@projektemacher/tify-plugin-musicxml`       | Rendered MusicXML score with playback (from the homr TEI)   |
+| [`packages/plugin-navplace`](packages/plugin-navplace/README.md)             | `@projektemacher/tify-plugin-navplace`       | navPlace places on a vector-tile map (MapLibre/OpenFreeMap) |
 
 Rules that keep this shippable: `tify` (and `openseadragon` where imported
 directly) are `peerDependencies` — the viewer must exist exactly once.
 Third-party runtime deps (`hdr-canvas`, `c2pa-web`, `@annotorious/openseadragon`,
-`opensheetmusicdisplay`)
+`opensheetmusicdisplay`, `maplibre-gl`)
 are bundled into their plugin. Consumers need `skipLibCheck` (TIFY itself
 ships no types; each package documents this). The C2PA package embeds the WASM
 binary (~11MB, ~4MB gzipped) via c2pa-web's `inline` entry — the only option
 that survives installation as a dependency, since a library cannot assume the
-host serves its internal asset paths.
+host serves its internal asset paths. The navPlace package bundles MapLibre
+and its worker into a chunk loaded only when a place map is shown.
 
 ## Generating IIIF images
 
@@ -54,7 +56,7 @@ examples actually load — is authored separately (IIIF Cookbook style).
 
 ## Examples
 
-Every workspace ships its own example under `packages/*/example/` — the six
+Every workspace ships its own example under `packages/*/example/` — the seven
 plugin packages plus core's info panel. The root demo (`index.html`) is a
 catalog linking them all:
 

@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:packages && vite build",
-    "build:packages": "npm run build --workspace @projektemacher/tify-plugin-core && npm run build --workspace @projektemacher/tify-plugin-side-panel && npm run build --workspace @projektemacher/tify-plugin-image-overlays && npm run build --workspace @projektemacher/tify-plugin-hdr && npm run build --workspace @projektemacher/tify-plugin-c2pa && npm run build --workspace @projektemacher/tify-plugin-annotorious && npm run build --workspace @projektemacher/tify-plugin-musicxml",
+    "build:packages": "npm run build --workspace @projektemacher/tify-plugin-core && npm run build --workspace @projektemacher/tify-plugin-side-panel && npm run build --workspace @projektemacher/tify-plugin-image-overlays && npm run build --workspace @projektemacher/tify-plugin-hdr && npm run build --workspace @projektemacher/tify-plugin-c2pa && npm run build --workspace @projektemacher/tify-plugin-annotorious && npm run build --workspace @projektemacher/tify-plugin-musicxml && npm run build --workspace @projektemacher/tify-plugin-navplace",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:i18n": "node scripts/check-i18n.js . && npm run test:i18n --workspaces --if-present",
@@ -30,6 +30,7 @@
     "@projektemacher/tify-plugin-hdr": "workspace:*",
     "@projektemacher/tify-plugin-image-overlays": "workspace:*",
     "@projektemacher/tify-plugin-musicxml": "workspace:*",
+    "@projektemacher/tify-plugin-navplace": "workspace:*",
     "@projektemacher/tify-plugin-side-panel": "workspace:*",
     "tify": "0.36.2"
   },

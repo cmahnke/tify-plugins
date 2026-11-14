@@ -46,6 +46,11 @@ const pages = [
     title: 'tify-plugin-musicxml',
     file: 'packages/plugin-musicxml/README.md',
   },
+  {
+    id: 'plugin-navplace',
+    title: 'tify-plugin-navplace',
+    file: 'packages/plugin-navplace/README.md',
+  },
 ];
 
 const docsTargets = new Map(pages.map((page) => [page.file, `${page.id}.html`]));

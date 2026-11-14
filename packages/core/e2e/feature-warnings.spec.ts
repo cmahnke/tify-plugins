@@ -12,8 +12,9 @@ function captureConsole(page: Page): string[] {
   return lines;
 }
 
-/** Manifest with canvas-level TEI, embedded annotations, a score and a
-    by-reference annotation page (so all four content features are present). */
+/** Manifest with canvas-level TEI, embedded annotations, a score, navPlace
+    (manifest-level + canvas-level on page 2) and a by-reference annotation
+    page (so every content feature is present). */
 function featureManifest(): object {
   const base = buildManifest({ canvases: 2 }) as any;
   base.items[0].seeAlso = [
@@ -39,6 +40,18 @@ function featureManifest(): object {
   ];
   // By-reference annotations on page 2: warns once, not twice.
   base.items[1].annotations = [{ id: `${MOCK_BASE}/annotations/p2.json`, type: 'AnnotationPage' }];
+  // Manifest-level navPlace, plus canvas-level on page 2.
+  base.navPlace = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        properties: { label: { en: ['Göttingen'] } },
+        geometry: { type: 'Point', coordinates: [9.938, 51.533] },
+      },
+    ],
+  };
+  base.items[1].navPlace = { type: 'FeatureCollection' };
   return base;
 }
 
@@ -50,23 +63,26 @@ test('warns once per unhandled manifest feature', async ({ page }) => {
   const lines = captureConsole(page);
   await mockIiif(page, { manifest: featureManifest() });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  // TEI (page 1), annotations (pages 1+2 collapse into one), score (page 1);
-  // the info.json advertises nothing extra.
-  await waitForWarnings(lines, 3);
+  // TEI (page 1), annotations (pages 1+2 collapse into one), score (page 1),
+  // navPlace (manifest + page 2); the info.json advertises nothing extra.
+  await waitForWarnings(lines, 4);
   await expect(lines[0]).toContain('@projektemacher/tify-plugin-image-overlays');
   await expect(lines[1]).toContain('@projektemacher/tify-plugin-annotorious');
   await expect(lines[2]).toContain('@projektemacher/tify-plugin-musicxml');
+  await expect(lines[3]).toContain('@projektemacher/tify-plugin-navplace');
+  // Both sources collapse into one warning detail.
+  await expect(lines[3]).toContain('manifest, page 2');
 });
 
 test('a loaded plugin silences its own warning', async ({ page }) => {
   // The core example loads no feature plugins, so every warning fires; the
   // mirror case (plugin loaded → its warning gone) lives in the annotorious
-  // suite, where the plugin actually registers itself with core.
+  // and navplace suites, where the plugin actually registers itself with core.
   const lines = captureConsole(page);
   await mockIiif(page, { manifest: featureManifest() });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await expect(page.locator('#panel')).toContainText('TEI transcription');
-  await waitForWarnings(lines, 3);
+  await waitForWarnings(lines, 4);
   await expect(lines.some((l) => l.includes('@projektemacher/tify-plugin-image-overlays'))).toBe(
     true,
   );
