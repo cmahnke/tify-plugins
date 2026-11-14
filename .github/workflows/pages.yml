@@ -32,7 +32,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - run: npm i
       - run: npm run build:pages
         env:
           VITE_BASE: /${{ github.event.repository.name }}/

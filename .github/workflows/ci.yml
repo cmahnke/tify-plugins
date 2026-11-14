@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - run: npm i
       - run: npm run lint --workspace @projektemacher/tify-plugin-${{ matrix.package }}
       - run: npm run test:i18n --workspace @projektemacher/tify-plugin-${{ matrix.package }}
 
@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - run: npm i
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:i18n
@@ -71,7 +71,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - run: npm i
       - run: npm run build
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:e2e --workspaces --if-present -- --project=${{ matrix.browser }}
