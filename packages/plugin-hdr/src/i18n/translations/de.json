@@ -16,7 +16,6 @@
   "HDR canvas is already enabled": "HDR-Canvas ist bereits aktiviert",
   "HDR canvas not available (needs Chromium with enable-experimental-web-platform-features and an HDR display)": "HDR-Canvas nicht verfügbar (benötigt Chromium mit enable-experimental-web-platform-features und ein HDR-Display)",
   "HDR not advertised": "HDR nicht angekündigt",
-  "HDR panel": "HDR-Bereich",
   "IIIF manifest URL": "IIIF-Manifest-URL",
   "Image service": "Bilddienst",
   "Image service: info.json unreachable (CORS?)": "Bilddienst: info.json nicht erreichbar (CORS?)",

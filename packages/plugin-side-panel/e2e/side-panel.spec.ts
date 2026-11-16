@@ -14,12 +14,12 @@ test('docks a Document panel and reports the page status', async ({ page }) => {
   await expect(dock).toContainText('Document');
   // Panels auto-open after init: the plugin UI is visible out of the box.
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
   await expect(page.locator('.tify-plugin-status')).toHaveText('Viewing page 1');
-  await expect(page.locator('#panel')).toContainText('Mock Book');
-  // The example documents how the panel contents are constructed.
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Mock Book');
+  // The example documents that the panel needs no page markup.
   await expect(page.locator('main.example > h1 + p')).toContainText(
-    'sidePanelPlugin renders the panel',
+    'sidePanelPlugin creates its own panel',
   );
 });
 
@@ -61,11 +61,11 @@ test('docks its button into the view group and shows a code example', async ({ p
     .toMatchObject({ parentClass: expect.stringContaining('-toggle'), visible: true });
 
   // The button toggles the docked panel.
-  await expect(page.locator('#panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
   await button.click();
-  await expect(page.locator('#panel')).toBeHidden();
+  await expect(page.locator('.tify-plugin-panel')).toBeHidden();
   await button.click();
-  await expect(page.locator('#panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
 
   // Code example below the viewer, with a link to the rendered plugin docs.
   const code = page.locator('details.code-example');
@@ -78,8 +78,9 @@ test('docks its button into the view group and shows a code example', async ({ p
   // even while the details element is still collapsed).
   await expect(code.locator('code span.hljs-keyword').first()).toBeAttached();
   await expect(code.locator('code span.hljs-string').first()).toBeAttached();
-  // The host markup block shows where #panel comes from, highlighted as XML.
-  await expect(code).toContainText('<aside id="panel">');
+  // The markup block shows that only the viewer needs markup — the plugin
+  // creates its own panel (no aside in the page anymore).
+  await expect(code).toContainText('Only the viewer needs markup');
   await expect(code.locator('code.language-xml span.hljs-name').first()).toHaveText('div');
   const docsLink = code.locator('a[href="../../../docs/plugin-side-panel.html"]');
   await expect(docsLink).toBeAttached();
@@ -94,10 +95,10 @@ test('dock button closes and reopens the panel', async ({ page }) => {
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
   await dock.click();
   await expect(dock).toHaveAttribute('aria-expanded', 'false');
-  await expect(page.locator('#panel')).toBeHidden();
+  await expect(page.locator('.tify-plugin-panel')).toBeHidden();
   await dock.click();
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
 });
 
 test('prev/next buttons navigate pages', async ({ page }) => {
@@ -124,7 +125,7 @@ test('german example chrome and plugin strings (?lang=de)', async ({ page }) => 
   );
   await expect(page.locator('main.example > h1')).toHaveText('Seitenleiste');
   await expect(page.locator('main.example > h1 + p')).toContainText(
-    'sidePanelPlugin rendert das Panel',
+    'sidePanelPlugin erzeugt sein Panel selbst',
   );
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toContainText('Dokument');
@@ -180,6 +181,6 @@ test('renders a v2 manifest title and canvas count', async ({ page }) => {
   await page.route(`${MOCK_BASE}/manifest.json`, (route) => route.fulfill({ json: v2Manifest() }));
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
   await expect(page.locator('.tify-plugin-status')).toHaveText('Viewing page 1');
-  await expect(page.locator('#panel')).toContainText('Mock V2');
-  await expect(page.locator('#panel')).toContainText('1 canvases');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Mock V2');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('1 canvases');
 });

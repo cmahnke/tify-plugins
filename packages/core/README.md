@@ -35,6 +35,8 @@ import '@projektemacher/tify-plugin-core/style.css';
 - **Info panel** — `infoPanelPlugin`: lists those features for the current
   page (one section per facing page in double-page spreads), docked or beside
   the viewer. Needs no sibling plugin package.
+- **Panel hosts** — `resolvePanelHost` / `createSidePanel` /
+  `detachedSidePanel`: where a plugin's panel lives (see below).
 - **Dock** — `dockPanel()` with `DOCK_ICONS`; see below.
 - **i18n** — `createTranslator`, `applyStaticTranslations`; see below.
 - **Styles** — `@projektemacher/tify-plugin-core/style.css` (panel skeleton,
@@ -43,6 +45,28 @@ import '@projektemacher/tify-plugin-core/style.css';
   page chrome (page resets, layout, code highlighting) lives in the separate
   `@projektemacher/tify-plugin-core/demo.css`, which only this repo's demo
   pages import.
+
+## Panel hosts
+
+Every panel-based plugin takes `panelEl?: HTMLElement | null`, so no page
+markup is required:
+
+- **Omitted** — the plugin creates its own host element
+  (`<aside class="tify-plugin-panel tify-plugin-panel-<id>">`) right after the
+  viewer container and owns it: `destroy()` removes the element again. This is
+  the zero-markup default; the viewer no longer has to be wired into the page
+  layout for a panel to work.
+- **`panelEl: null`** — the panel is disabled. Overlay-style plugins
+  (annotorious, image-overlays, musicxml) keep working without it; plugins
+  whose whole UI is the panel degrade to a no-op instance.
+- **`panelEl: HTMLElement`** — the page owns the element (sidecar layout,
+  custom positioning). `destroy()` empties it but leaves it in the DOM.
+
+Lower-level access: `resolvePanelHost(tify, id, panelEl)` returns
+`{ host, owned }` and is what the plugins use internally;
+`createSidePanel(host, title)` fills a host with the panel skeleton
+(`<h2>`, status, body); `detachedSidePanel()` builds the same skeleton without
+attaching it (for panel-less rendering paths).
 
 ## Docked panels
 
@@ -88,6 +112,11 @@ Peer dependency: `tify` (the viewer provides the single instance).
 ```ts
 import { infoPanelPlugin } from '@projektemacher/tify-plugin-core';
 
+// No page markup needed: the plugin creates its own panel
+// and docks a toggle button into the viewer header.
+const plugin = await infoPanelPlugin(tify);
+
+// Or with an explicit page-owned host (sidecar unless docked):
 const plugin = await infoPanelPlugin(tify, {
   panelEl: document.querySelector('#panel'),
 });

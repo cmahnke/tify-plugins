@@ -57,7 +57,6 @@ async function load(manifestUrl: string): Promise<void> {
   try {
     await tify.ready;
     plugin = await navPlacePlugin(tify, {
-      panelEl: document.querySelector('#panel') as HTMLElement,
       style: styleOverride,
     });
   } catch (error) {

@@ -20,11 +20,13 @@ test('degrades to panel-only mode without WebGL', async ({ page }) => {
   await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
     timeout: 15_000,
   });
-  await expect(page.locator('#panel')).toHaveAttribute('data-shapes', 'off');
-  await expect(page.locator('#panel')).toContainText('Shapes not rendered (WebGL unavailable)');
+  await expect(page.locator('.tify-plugin-panel')).toHaveAttribute('data-shapes', 'off');
+  await expect(page.locator('.tify-plugin-panel')).toContainText(
+    'Shapes not rendered (WebGL unavailable)',
+  );
   // List still renders, as plain rows (no canvas shapes, no select buttons).
   // NB: annotorious may leave an orphan (non-functional) GL canvas element
   // behind after its init throws — the panel flag is the source of truth.
-  await expect(page.locator('#panel tbody tr')).toHaveCount(2);
-  await expect(page.locator('#panel .tify-plugin-anno-link')).toHaveCount(0);
+  await expect(page.locator('.tify-plugin-panel tbody tr')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel .tify-plugin-anno-link')).toHaveCount(0);
 });

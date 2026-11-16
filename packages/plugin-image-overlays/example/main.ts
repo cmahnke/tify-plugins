@@ -61,7 +61,6 @@ async function load(manifestUrl: string): Promise<void> {
     await tify.ready;
     plugin = await imageOverlaysPlugin(tify, {
       markers: 3,
-      panelEl: document.querySelector('#panel') as HTMLElement,
       showAnnotations,
       showOutlines,
       fillColor,

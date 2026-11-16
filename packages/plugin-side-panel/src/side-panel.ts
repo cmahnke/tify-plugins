@@ -1,20 +1,29 @@
 // Side-panel plugin: renders manifest metadata + page controls. Docks into
-// TIFY's viewer chrome when recognized, otherwise renders into panelEl
-// beside the viewer (TIFY's `views` option only supports built-in views).
+// TIFY's viewer chrome when recognized, otherwise renders beside the viewer
+// (TIFY's `views` option only supports built-in views). The panel host is
+// supplied by the page, created next to the viewer when omitted, or the
+// panel is disabled with `panelEl: null`.
 import type Tify from 'tify';
 import {
   createSidePanel,
+  detachedSidePanel,
   getPages,
   onPagesChange,
+  resolvePanelHost,
   waitReady,
+  type SidePanel,
 } from '@projektemacher/tify-plugin-core';
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
 import { createTranslator } from '@projektemacher/tify-plugin-core';
 import type { TifyPlugin } from '@projektemacher/tify-plugin-core';
 
 export interface SidePanelOptions {
-  /** Panel content host (sidecar unless docked into the viewer). */
-  panelEl: HTMLElement;
+  /**
+   * Panel content host (sidecar unless docked into the viewer). Omit to let
+   * the plugin create its own host next to the viewer — no page markup
+   * required. `null` disables the panel (plugin becomes a no-op).
+   */
+  panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
    * true: dock or throw. false: never dock.
@@ -40,15 +49,19 @@ export async function sidePanelPlugin(tify: Tify, options: SidePanelOptions): Pr
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
-  const panel = createSidePanel(options.panelEl, t('Document'));
-  const dock: DockHandle | null = dockPanel({
-    tify,
-    id: 'document',
-    label: t('Document'),
-    iconSvg: DOCK_ICONS.list,
-    contentEl: options.panelEl,
-    mode: options.dock,
-  });
+  const { host, owned } = resolvePanelHost(tify, 'document', options.panelEl);
+  const panel: SidePanel = host ? createSidePanel(host, t('Document')) : detachedSidePanel();
+  const dock: DockHandle | null = host
+    ? dockPanel({
+        tify,
+        id: 'document',
+        label: t('Document'),
+        iconSvg: DOCK_ICONS.list,
+        contentEl: host,
+        contentOwned: owned,
+        mode: options.dock,
+      })
+    : null;
   if (options.autoOpen !== false) dock?.open();
 
   const render = async (): Promise<void> => {
@@ -138,8 +151,11 @@ export async function sidePanelPlugin(tify: Tify, options: SidePanelOptions): Pr
     destroy() {
       unsubscribe();
       dock?.destroy();
-      options.panelEl.classList.remove('tify-plugin-panel');
-      options.panelEl.innerHTML = '';
+      if (host) {
+        host.classList.remove('tify-plugin-panel');
+        host.innerHTML = '';
+        if (owned) host.remove();
+      }
     },
   };
 }

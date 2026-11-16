@@ -222,7 +222,7 @@ async function oscStarts(page: Page): Promise<Array<{ t: number; f: number; w: s
 async function openPlayer(page: Page): Promise<void> {
   const dock = page.locator('.tify-plugin-dock-btn');
   if ((await dock.getAttribute('aria-expanded')) !== 'true') await dock.click();
-  await expect(page.locator('#panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
   await expect(page.locator('.player-controls').first()).toBeVisible({ timeout: 30_000 });
 }
 
@@ -244,7 +244,7 @@ test('docks a score panel and renders the aligned score overlay', async ({ page 
   await expect(dock).toHaveCount(1);
   await expect(dock).toContainText('Score');
   await openPlayer(page);
-  await expect(page.locator('#panel h2')).toHaveText('Score');
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('Score');
   // OSMD systems mapped onto the scan as nested score pieces.
   await expect(page.locator('.score-overlay > svg.score-system').first()).toBeVisible({
     timeout: 30_000,
@@ -516,7 +516,7 @@ test('discovers a v2 TEI rendering', async ({ page }) => {
   await expect(dock).toHaveCount(1);
   await expect(dock).toContainText('Score');
   await openPlayer(page);
-  await expect(page.locator('#panel h2')).toHaveText('Score');
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('Score');
   await expect(page.locator('.score-overlay > svg.score-system').first()).toBeVisible({
     timeout: 30_000,
   });

@@ -4,13 +4,13 @@ import { MOCK_BASE, buildInfo, buildManifest, mockIiif } from '../../../e2e/help
 const EXAMPLE = '/packages/core/example/';
 
 function row(page: Page, label: string) {
-  return page.locator(`#panel tr:has(th:text-is("${label}"))`);
+  return page.locator(`.tify-plugin-panel tr:has(th:text-is("${label}"))`);
 }
 
 test('lists manifest and image features of a plain v3 book', async ({ page }) => {
   await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing page 1');
   await expect(row(page, 'Presentation version')).toContainText('3');
   await expect(row(page, 'Canvases')).toContainText('1');
   await expect(row(page, 'TEI transcription')).toContainText('no');
@@ -117,10 +117,10 @@ function navPlaceManifest(): object {
 test('detects navPlace on the manifest and on canvases', async ({ page }) => {
   await mockIiif(page, { manifest: navPlaceManifest() });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing page 1');
   await expect(row(page, 'navPlace')).toContainText('yes (manifest)');
   await page.locator('button[title="Next page"] >> nth=0').click();
-  await expect(page.locator('#panel')).toContainText('Viewing page 2');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing page 2');
   await expect(row(page, 'navPlace')).toContainText('yes (canvas)');
 });
 
@@ -272,7 +272,7 @@ test('german panel chrome (?lang=de)', async ({ page }) => {
   await page.goto(
     `${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}&lang=de`,
   );
-  await expect(page.locator('#panel')).toContainText('Bilddienst');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Bilddienst');
   await expect(row(page, 'TEI-Transkription')).toContainText('nein');
   await expect(row(page, 'navPlace')).toContainText('nein');
 });
@@ -280,14 +280,20 @@ test('german panel chrome (?lang=de)', async ({ page }) => {
 test('double-page spread lists both facing pages', async ({ page }) => {
   await mockIiif(page, { manifest: buildManifest({ canvases: 3 }) });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing page 1');
   await page.locator('button[title="Toggle double-page"]').click();
   await page.locator('button[title="Next page"] >> nth=0').click();
-  await expect(page.locator('#panel')).toContainText('Viewing pages 2, 3', { timeout: 15_000 });
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing pages 2, 3', {
+    timeout: 15_000,
+  });
   // Per-page sections: one manifest table and one image-service table each.
-  await expect(page.locator('#panel h3').filter({ hasText: /^Page [23]$/ })).toHaveCount(2);
-  await expect(page.locator('#panel h3').filter({ hasText: 'Image service (page' })).toHaveCount(2);
+  await expect(
+    page.locator('.tify-plugin-panel h3').filter({ hasText: /^Page [23]$/ }),
+  ).toHaveCount(2);
+  await expect(
+    page.locator('.tify-plugin-panel h3').filter({ hasText: 'Image service (page' }),
+  ).toHaveCount(2);
   // Each page's canvas features come from its own canvas.
-  await expect(page.locator('#panel')).toContainText('Image service (page 2)');
-  await expect(page.locator('#panel')).toContainText('Image service (page 3)');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Image service (page 2)');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Image service (page 3)');
 });

@@ -13,12 +13,17 @@ import { musicxmlPlugin } from '@projektemacher/tify-plugin-musicxml';
 import '@projektemacher/tify-plugin-core/style.css';
 import '@projektemacher/tify-plugin-musicxml/musicxml.css';
 
-const plugin = await musicxmlPlugin(tify, {
-  panelEl: document.querySelector('#panel'),
-});
+// No page markup needed: the plugin creates its own panel
+// and docks a toggle button into the viewer header.
+const plugin = await musicxmlPlugin(tify);
+
+// With an explicit page-owned host (sidecar unless docked):
+const plugin = await musicxmlPlugin(tify, { panelEl: document.querySelector('#panel') });
 ```
 
-Options: `panelEl` (required, sidecar unless docked), `dock?: boolean | 'auto'`
+Options: `panelEl?: HTMLElement | null` (omit for a plugin-created host;
+`null` disables the panel — score overlays keep working),
+`dock?: boolean | 'auto'`
 (default `'auto'`), `tei?: string | ((page: number) => string | undefined)`
 (absolute TEI URL, raw TEI XML, or a per-page resolver — overrides the
 manifest discovery below; a plain string applies to every page),

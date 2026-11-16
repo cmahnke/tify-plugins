@@ -26,20 +26,20 @@
       </header>
       <div class="layout">
         <div id="tify" class="tify-frame"></div>
-        <aside id="panel" data-i18n-aria="Overlays panel" aria-label="Overlays panel"></aside>
       </div>
       <details class="code-example">
         <summary data-i18n="Code example">Code example</summary>
-        <pre><code class="language-xml">&lt;!-- Viewer and panel hosts in your markup --&gt;
-&lt;div id="tify"&gt;&lt;/div&gt;
-&lt;aside id="panel"&gt;&lt;/aside&gt;</code></pre>
+        <pre><code class="language-xml">&lt;!-- Only the viewer needs markup — the plugin creates its own panel --&gt;
+&lt;div id="tify"&gt;&lt;/div&gt;</code></pre>
         <pre><code class="language-typescript">import Tify from 'tify';
 import { imageOverlaysPlugin } from '@projektemacher/tify-plugin-image-overlays';
 
 const tify = new Tify({ container: '#tify', manifestUrl });
+// No panelEl: the plugin creates its own panel and docks
+// a toggle button into the viewer header. panelEl: null
+// runs overlay-only, without any panel.
 const plugin = await imageOverlaysPlugin(tify, {
   markers: 3,
-  panelEl: document.querySelector('#panel'),
   showAnnotations: true,
   showOutlines: true,
   fillColor: '#0b5fff',

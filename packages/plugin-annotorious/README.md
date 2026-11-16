@@ -11,9 +11,12 @@ import { annotoriousPlugin } from '@projektemacher/tify-plugin-annotorious';
 import '@projektemacher/tify-plugin-core/style.css';
 import '@projektemacher/tify-plugin-annotorious/annotorious.css';
 
-const plugin = await annotoriousPlugin(tify, {
-  panelEl: document.querySelector('#panel'),
-});
+// No page markup needed: the plugin creates its own panel
+// and docks a toggle button into the viewer header.
+const plugin = await annotoriousPlugin(tify);
+
+// With an explicit page-owned host, or panelEl: null for overlay-only mode:
+const plugin = await annotoriousPlugin(tify, { panelEl: document.querySelector('#panel') });
 ```
 
 ## Notes

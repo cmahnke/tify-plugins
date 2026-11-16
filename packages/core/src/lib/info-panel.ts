@@ -7,6 +7,7 @@ import {
   createSidePanel,
   getPages,
   onPagesChange,
+  resolvePanelHost,
   waitReady,
   type SidePanel,
   type TifyPlugin,
@@ -23,8 +24,12 @@ import {
 } from './features';
 
 export interface InfoPanelOptions {
-  /** Panel content host (sidecar unless docked into the viewer). */
-  panelEl: HTMLElement;
+  /**
+   * Panel content host (sidecar unless docked into the viewer). Omit to let
+   * the plugin create its own host next to the viewer — no page markup
+   * required. `null` disables the panel (refresh/destroy become no-ops).
+   */
+  panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
    * true: dock or throw. false: never dock.
@@ -162,13 +167,21 @@ async function renderPageImageFeatures(
 
 export async function infoPanelPlugin(tify: Tify, options: InfoPanelOptions): Promise<InfoPlugin> {
   await waitReady(tify);
+  // Panel disabled: no UI, no polling — just a no-op plugin instance.
+  if (options.panelEl === null) {
+    return {
+      refresh() {},
+      destroy() {},
+    };
+  }
+  const { host, owned } = resolvePanelHost(tify, 'info', options.panelEl);
   const de = (
     (await import('../i18n/translations/de.json')) as unknown as {
       default: Record<string, string>;
     }
   ).default;
   const { t } = await createTranslator(tify, { de });
-  const panel: SidePanel = createSidePanel(options.panelEl, t('Info'));
+  const panel: SidePanel = createSidePanel(host, t('Info'));
   const manifestBody = document.createElement('div');
   const imageBody = document.createElement('div');
   panel.body.append(manifestBody, imageBody);
@@ -181,7 +194,8 @@ export async function infoPanelPlugin(tify: Tify, options: InfoPanelOptions): Pr
     id: 'info',
     label: t('Info'),
     iconSvg: DOCK_ICONS.list,
-    contentEl: options.panelEl,
+    contentEl: host,
+    contentOwned: owned,
     mode: options.dock,
   });
   if (options.autoOpen !== false) dock?.open();
@@ -253,8 +267,9 @@ export async function infoPanelPlugin(tify: Tify, options: InfoPanelOptions): Pr
       disposed = true;
       unsubscribe?.();
       dock?.destroy();
-      options.panelEl.classList.remove('tify-plugin-panel');
-      options.panelEl.innerHTML = '';
+      host.classList.remove('tify-plugin-panel');
+      host.innerHTML = '';
+      if (owned) host.remove();
     },
   };
 }

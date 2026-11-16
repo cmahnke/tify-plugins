@@ -1,6 +1,6 @@
 {
   "name": "@projektemacher/tify-plugin-navplace",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "navPlace map plugin for the TIFY IIIF viewer: places from the manifest on a configurable vector-tile map (MapLibre, OpenFreeMap by default)",
   "type": "module",
   "license": "AGPL-3.0-or-later",

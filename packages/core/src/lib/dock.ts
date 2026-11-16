@@ -84,6 +84,11 @@ export interface DockOptions {
   /** Panel content host (keeps working as a sidecar when docking is off). */
   contentEl: HTMLElement;
   /**
+   * contentEl was auto-created by the plugin: when docking must throw
+   * (mode: true, unrecognized DOM) the orphan host is removed again.
+   */
+  contentOwned?: boolean;
+  /**
    * 'auto' (default): dock when TIFY's DOM is recognized, else sidecar.
    * true: dock or throw. false: never dock.
    */
@@ -113,6 +118,7 @@ export function dockPanel(options: DockOptions): DockHandle | null {
   const viewGroup = pickHeaderGroup(scope);
   if (!(main instanceof HTMLElement) || !(viewGroup instanceof HTMLElement)) {
     if (mode === true) {
+      if (options.contentOwned) contentEl.remove();
       throw new Error(`tify-plugins: cannot dock panel "${id}" (TIFY DOM not recognized)`);
     }
     return null;
@@ -136,6 +142,7 @@ export function dockPanel(options: DockOptions): DockHandle | null {
   };
   if (findHeaderGroups().length === 0) {
     if (mode === true) {
+      if (options.contentOwned) contentEl.remove();
       throw new Error(`tify-plugins: cannot dock panel "${id}" (TIFY DOM not recognized)`);
     }
     return null;

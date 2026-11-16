@@ -6,7 +6,6 @@
   "Code example": "Codebeispiel",
   "Document": "Dokument",
   "Document navigation": "Dokumentnavigation",
-  "Document panel": "Dokumentbereich",
   "Documentation": "Dokumentation",
   "IIIF manifest URL": "IIIF-Manifest-URL",
   "Load": "Laden",
@@ -14,7 +13,7 @@
   "Next →": "Weiter →",
   "Side panel": "Seitenleiste",
   "Side panel — tify-plugins": "Seitenleiste — tify-plugins",
-  "sidePanelPlugin renders the panel into the aside below: document title and canvas count from the manifest, live page status from the viewer, and Previous/Next/Thumbnails controls. Its toggle button docks into the viewer header.": "sidePanelPlugin rendert das Panel in das Aside-Element unten: Dokumenttitel und Canvas-Zahl aus dem Manifest, Live-Seitenstatus aus dem Viewer sowie Vor/Zurück/Übersicht-Steuerung. Sein Umschalt-Button dockt in die Viewer-Kopfzeile.",
+  "sidePanelPlugin creates its own panel: document title and canvas count from the manifest, live page status from the viewer, and Previous/Next/Thumbnails controls. Its toggle button docks into the viewer header; without docking the panel renders beside the viewer.": "sidePanelPlugin erzeugt sein Panel selbst: Dokumenttitel und Canvas-Zahl aus dem Manifest, Live-Seitenstatus aus dem Viewer sowie Vor/Zurück/Übersicht-Steuerung. Sein Umschalt-Button dockt in die Viewer-Kopfzeile; ohne Docking erscheint das Panel neben dem Viewer.",
   "Thumbnails": "Miniaturansichten",
   "Viewing page {pages}": "Seite {pages} wird angezeigt",
   "Viewing pages {pages}": "Seiten {pages} werden angezeigt"

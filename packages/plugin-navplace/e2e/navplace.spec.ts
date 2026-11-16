@@ -83,31 +83,33 @@ test('docks a places panel listing the manifest places', async ({ page }) => {
   const dock = page.locator('.tify-plugin-dock-navplace');
   await expect(dock).toContainText('Places');
   // Panels auto-open after init.
-  await expect(page.locator('#panel h2')).toHaveText('Places');
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('Places');
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(2);
   await expect(page.locator('.navplace-row-label').first()).toHaveText('Göttingen');
   await expect(page.locator('.navplace-row-label').nth(1)).toHaveText('Berlin');
   // With WebGL2 the map boots and the status clears; without it the plugin
   // degrades gracefully — the rows stay, the status explains the missing map.
   if (await webgl2Available(page)) {
-    await expect(page.locator('#panel .tify-plugin-status')).toHaveText('');
+    await expect(page.locator('.tify-plugin-panel .tify-plugin-status')).toHaveText('');
     await expect(page.locator('.navplace-map .maplibregl-canvas')).toBeVisible({
       timeout: 20_000,
     });
   } else {
-    await expect(page.locator('#panel .tify-plugin-status')).toContainText('Map unavailable');
+    await expect(page.locator('.tify-plugin-panel .tify-plugin-status')).toContainText(
+      'Map unavailable',
+    );
   }
 });
 
 test('canvas places follow the visible page', async ({ page }) => {
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(2);
   await page.locator('button[title="Next page"] >> nth=0').click();
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(3);
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(3);
   await expect(page.locator('.navplace-row-label').nth(2)).toHaveText('Hamburg');
   // Back to a page without canvas places: the canvas feature disappears.
   await page.locator('button[title="Previous page"] >> nth=0').click();
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(2);
 });
 
 test('german labels come from the language map', async ({ page }) => {
@@ -115,13 +117,13 @@ test('german labels come from the language map', async ({ page }) => {
     `${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}&lang=de`,
   );
   await expect(page.locator('.tify-plugin-dock-navplace')).toContainText('Orte');
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(2);
   await expect(page.locator('.navplace-row-label').first()).toHaveText('Göttingen (Stadt)');
   await expect(page.locator('.navplace-row-label').nth(1)).toHaveText('Berlin');
   // TIFY's own chrome is un-translated in tests (CDN mocked away), so the
   // navigation button keeps its English title.
   await page.locator('button[title="Next page"] >> nth=0').click();
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(3);
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(3);
   await expect(page.locator('.navplace-row-label').nth(2)).toHaveText('Hamburg');
 });
 
@@ -152,11 +154,11 @@ test('a manifest without navPlace never loads the map viewer', async ({ page }) 
   await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
   const mapChunks = trackRequests(page, /map-viewer|maplibre/);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel h2')).toHaveText('Places');
-  await expect(page.locator('#panel .tify-plugin-status')).toContainText(
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('Places');
+  await expect(page.locator('.tify-plugin-panel .tify-plugin-status')).toContainText(
     'No places in this manifest',
   );
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(0);
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(0);
   // Laziness: no map chunk is fetched when there is nothing to show.
   await page.waitForTimeout(1500);
   expect(mapChunks.count()).toBe(0);
@@ -176,7 +178,7 @@ test('a loaded navplace plugin silences its own feature warning', async ({ page 
   // the plugin core would warn about @projektemacher/tify-plugin-navplace.
   const lines = captureConsole(page);
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel h2')).toHaveText('Places');
-  await expect(page.locator('#panel .navplace-row')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('Places');
+  await expect(page.locator('.tify-plugin-panel .navplace-row')).toHaveCount(2);
   expect(lines.filter((l) => l.includes('[tify-plugins]'))).toEqual([]);
 });

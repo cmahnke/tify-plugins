@@ -21,14 +21,14 @@ test(`checks viewport tiles and reports unsigned provenance`, async ({ page }, t
   const dock = page.locator('.tify-plugin-dock-btn');
   await expect(dock).toContainText('Provenance');
   // Panels auto-open after init.
-  await expect(page.locator('#panel')).toBeVisible();
-  await expect(page.locator('#panel h2')).toHaveText('Provenance');
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('Provenance');
   await expect(page.locator('.tify-plugin-service-line')).toHaveText(
     'Image service advertises C2PA: yes',
     { timeout: 30_000 },
   );
-  await expect(page.locator('#panel input[type="url"]')).toBeVisible();
-  const rows = page.locator('#panel tbody tr');
+  await expect(page.locator('.tify-plugin-panel input[type="url"]')).toBeVisible();
+  const rows = page.locator('.tify-plugin-panel tbody tr');
   await expect(rows.first()).toBeVisible();
   if (testInfo.project.name === 'webkit') return; // no WASM engine: tiles stay unknown
   await expect(rows.first().locator('.pill')).toHaveText('unsigned', { timeout: 60_000 });

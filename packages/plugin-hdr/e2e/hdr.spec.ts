@@ -22,9 +22,9 @@ test('reports capability status and an HDR-advertising image service', async ({ 
   await expect(dock).toContainText('HDR');
   await expect(dock).toHaveAttribute('title', /Display HDR: (yes|no)/);
   // Panels auto-open after init.
-  await expect(page.locator('#panel')).toBeVisible();
-  await expect(page.locator('#panel h2')).toHaveText('HDR');
-  await expect(page.locator('#panel .pill')).toHaveText('HDR advertised');
-  await expect(page.locator('#panel h3')).toHaveText('Image service');
-  await expect(page.locator('#panel table')).toContainText('API version');
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel h2')).toHaveText('HDR');
+  await expect(page.locator('.tify-plugin-panel .pill')).toHaveText('HDR advertised');
+  await expect(page.locator('.tify-plugin-panel h3')).toHaveText('Image service');
+  await expect(page.locator('.tify-plugin-panel table')).toContainText('API version');
 });

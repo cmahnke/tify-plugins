@@ -51,6 +51,13 @@
   overflow: auto;
 }
 
+/* Auto-created panel hosts (panelEl omitted): keep a small gap to the viewer
+   in sidecar mode. Docked hosts are re-parented into .tify-main, where
+   .tify-plugin-dock takes over. */
+.tify-plugin-panel-auto {
+  margin-block: 0.5rem;
+}
+
 .tify-plugin-panel h2 {
   margin-top: 0;
   font-size: 1rem;

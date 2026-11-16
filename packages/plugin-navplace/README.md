@@ -17,9 +17,12 @@ import { navPlacePlugin } from '@projektemacher/tify-plugin-navplace';
 import '@projektemacher/tify-plugin-core/style.css';
 import '@projektemacher/tify-plugin-navplace/navplace.css';
 
-const plugin = await navPlacePlugin(tify, {
-  panelEl: document.querySelector('#panel'),
-});
+// No page markup needed: the plugin creates its own panel
+// and docks a toggle button into the viewer header.
+const plugin = await navPlacePlugin(tify);
+
+// With an explicit page-owned host (sidecar unless docked):
+const plugin = await navPlacePlugin(tify, { panelEl: document.querySelector('#panel') });
 ```
 
 The map viewer is **lazy-loaded**: plugin init builds only panel DOM and
@@ -69,7 +72,8 @@ changes).
 
 ## Options
 
-- `panelEl` (required, sidecar unless docked), `dock?: boolean | 'auto'`
+- `panelEl?: HTMLElement | null` (omit for a plugin-created host; `null`
+  disables the panel), `dock?: boolean | 'auto'`
   (default `'auto'`), `autoOpen?: boolean` (default `true`).
 - `style?: string | object` — MapLibre style URL or inline style object.
   Default: `https://tiles.openfreemap.org/styles/liberty`. Other OpenFreeMap

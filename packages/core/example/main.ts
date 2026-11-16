@@ -51,9 +51,7 @@ async function load(manifestUrl: string): Promise<void> {
   });
   try {
     await tify.ready;
-    plugin = await infoPanelPlugin(tify, {
-      panelEl: document.querySelector('#panel') as HTMLElement,
-    });
+    plugin = await infoPanelPlugin(tify, {});
   } catch (error) {
     console.error(error);
   }

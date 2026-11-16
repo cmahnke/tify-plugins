@@ -16,9 +16,12 @@ import '@projektemacher/tify-plugin-core/style.css';
 enableHdrCanvasOnce();
 const tify = new Tify({ container: '#tify', manifestUrl });
 await tify.ready;
-const plugin = await hdrPlugin(tify, {
-  panelEl: document.querySelector('#panel'),
-});
+// No page markup needed: the plugin creates its own panel
+// and docks a toggle button into the viewer header.
+const plugin = await hdrPlugin(tify);
+
+// With an explicit page-owned host (sidecar unless docked):
+const plugin = await hdrPlugin(tify, { panelEl: document.querySelector('#panel') });
 ```
 
 ## Notes

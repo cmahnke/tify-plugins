@@ -31,19 +31,18 @@
       </header>
       <div class="layout">
         <div id="tify" class="tify-frame"></div>
-        <aside id="panel" data-i18n-aria="Provenance panel" aria-label="Provenance panel"></aside>
       </div>
       <details class="code-example">
         <summary data-i18n="Code example">Code example</summary>
-        <pre><code class="language-xml">&lt;!-- Viewer and panel hosts in your markup --&gt;
-&lt;div id="tify"&gt;&lt;/div&gt;
-&lt;aside id="panel"&gt;&lt;/aside&gt;</code></pre>
+        <pre><code class="language-xml">&lt;!-- Only the viewer needs markup — the plugin creates its own panel --&gt;
+&lt;div id="tify"&gt;&lt;/div&gt;</code></pre>
         <pre><code class="language-typescript">import Tify from 'tify';
 import { c2paPlugin } from '@projektemacher/tify-plugin-c2pa';
 
 const tify = new Tify({ container: '#tify', manifestUrl });
+// No panelEl: the plugin creates its own panel and docks
+// a toggle button into the viewer header.
 const plugin = await c2paPlugin(tify, {
-  panelEl: document.querySelector('#panel'),
   trustAnchors: 'https://contentcredentials.org/trust/anchors.pem',
 });</code></pre>
         <p class="code-links">

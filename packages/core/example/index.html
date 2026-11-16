@@ -27,21 +27,18 @@
       </header>
       <div class="layout">
         <div id="tify" class="tify-frame"></div>
-        <aside id="panel" data-i18n-aria="Info panel" aria-label="Info panel"></aside>
       </div>
       <details class="code-example">
         <summary data-i18n="Code example">Code example</summary>
-        <pre><code class="language-xml">&lt;!-- Viewer and panel hosts in your markup --&gt;
-&lt;div id="tify"&gt;&lt;/div&gt;
-&lt;aside id="panel"&gt;&lt;/aside&gt;</code></pre>
+        <pre><code class="language-xml">&lt;!-- Only the viewer needs markup — the plugin creates its own panel --&gt;
+&lt;div id="tify"&gt;&lt;/div&gt;</code></pre>
         <pre><code class="language-typescript">import Tify from 'tify';
 import { infoPanelPlugin } from '@projektemacher/tify-plugin-core';
 
 const tify = new Tify({ container: '#tify', manifestUrl });
-// The plugin fills the #panel host above and docks
+// No panelEl: the plugin creates its own panel and docks
 // a toggle button into the viewer header.
 const plugin = await infoPanelPlugin(tify, {
-  panelEl: document.querySelector('#panel'),
   dock: 'auto',
   autoOpen: true,
 });

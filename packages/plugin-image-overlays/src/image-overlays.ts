@@ -23,7 +23,11 @@ import {
   waitReady,
 } from '@projektemacher/tify-plugin-core';
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
-import { createTranslator, registerPlugin } from '@projektemacher/tify-plugin-core';
+import {
+  createTranslator,
+  registerPlugin,
+  resolvePanelHost,
+} from '@projektemacher/tify-plugin-core';
 import type { PageLayoutEntry, SidePanel, TifyPlugin } from '@projektemacher/tify-plugin-core';
 import { fetchTeiPageCached, type TeiOptions, type TeiWordBox } from './tei';
 
@@ -32,11 +36,11 @@ export interface ImageOverlaysOptions {
   markers?: number;
   /** TEI word boxes; `false` disables TEI and always shows demo markers. */
   tei?: false | TeiOptions;
-  /** Host element for the overlay controls panel. Omit for overlay-only mode. */
+  /** Host element for the overlay controls panel. Omit to let the plugin create its own host next to the viewer — no page markup required. `null` disables the panel (overlay-only mode). */
   panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
-   * true: dock or throw. false: never dock. Ignored without panelEl.
+   * true: dock or throw. false: never dock. Ignored with `panelEl: null`.
    */
   dock?: boolean | 'auto';
   /** Open the docked panel after init (default true). */
@@ -100,16 +104,16 @@ export async function imageOverlaysPlugin(
   const unregister = registerPlugin('image-overlays');
   const count = options.markers ?? 3;
   const teiOpts = options.tei === false ? null : (options.tei ?? {});
-  const panel: SidePanel | null = options.panelEl
-    ? createSidePanel(options.panelEl, t('Overlays'))
-    : null;
-  const dock: DockHandle | null = options.panelEl
+  const { host, owned } = resolvePanelHost(tify, 'overlays', options.panelEl);
+  const panel: SidePanel | null = host ? createSidePanel(host, t('Overlays')) : null;
+  const dock: DockHandle | null = host
     ? dockPanel({
         tify,
         id: 'overlays',
         label: t('Overlays'),
         iconSvg: DOCK_ICONS.image,
-        contentEl: options.panelEl,
+        contentEl: host,
+        contentOwned: owned,
         mode: options.dock,
       })
     : null;
@@ -482,9 +486,10 @@ export async function imageOverlaysPlugin(
         // Ignore teardown races.
       }
       dock?.destroy();
-      if (options.panelEl) {
-        options.panelEl.classList.remove('tify-plugin-panel');
-        options.panelEl.innerHTML = '';
+      if (host) {
+        host.classList.remove('tify-plugin-panel');
+        host.innerHTML = '';
+        if (owned) host.remove();
       }
       clear();
     },

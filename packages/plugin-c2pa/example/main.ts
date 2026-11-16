@@ -55,7 +55,6 @@ async function load(
   plugin = null;
   tify?.destroy();
   document.querySelector('#tify')!.innerHTML = '';
-  (document.querySelector('#panel') as HTMLElement).innerHTML = '';
   tify = new Tify({
     container: '#tify',
     manifestUrl,
@@ -64,7 +63,6 @@ async function load(
   try {
     await tify.ready;
     plugin = await c2paPlugin(tify, {
-      panelEl: document.querySelector('#panel') as HTMLElement,
       trustAnchors,
       maxTiles: 8,
     });

@@ -22,6 +22,7 @@ import {
   createSidePanel,
   getInfoJsonForCurrentPage,
   onPagesChange,
+  resolvePanelHost,
   serviceSupports,
   waitReady,
   type SidePanel,
@@ -53,8 +54,12 @@ export interface TrustAnchorsConfig {
 }
 
 export interface C2paOptions {
-  /** Panel content host (sidecar unless docked into the viewer). */
-  panelEl: HTMLElement;
+  /**
+   * Panel content host (sidecar unless docked into the viewer). Omit to let
+   * the plugin create its own host next to the viewer — no page markup
+   * required. `null` disables the plugin (no validation, no-op instance).
+   */
+  panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
    * true: dock or throw. false: never dock.
@@ -207,9 +212,18 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
   const { t } = await createTranslator(tify, { de });
   // Silence core's missing-plugin warning for the features this plugin owns.
   const unregister = registerPlugin('c2pa');
+  // Plugin disabled: skip the tile-sampling/validation pipeline entirely.
+  if (options.panelEl === null) {
+    return {
+      async setTrustAnchorsUrl() {},
+      refresh() {},
+      destroy() {},
+    };
+  }
   const maxTiles = options.maxTiles ?? 8;
   const trust = resolveTrustAnchors(options.trustAnchors);
-  const panel: SidePanel = createSidePanel(options.panelEl, t('Provenance'));
+  const { host, owned } = resolvePanelHost(tify, 'provenance', options.panelEl);
+  const panel: SidePanel = createSidePanel(host, t('Provenance'));
 
   let disposed = false;
   let runId = 0;
@@ -221,7 +235,8 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
     id: 'provenance',
     label: t('Provenance'),
     iconSvg: DOCK_ICONS.shield,
-    contentEl: options.panelEl,
+    contentEl: host,
+    contentOwned: owned,
     mode: options.dock,
   });
   if (options.autoOpen !== false) dock?.open();
@@ -463,8 +478,9 @@ export async function c2paPlugin(tify: Tify, options: C2paOptions): Promise<C2pa
       } catch {
         // Ignore teardown races.
       }
-      options.panelEl.classList.remove('tify-plugin-panel');
-      options.panelEl.innerHTML = '';
+      host.classList.remove('tify-plugin-panel');
+      host.innerHTML = '';
+      if (owned) host.remove();
     },
   };
 }

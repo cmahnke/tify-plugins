@@ -46,9 +46,7 @@ async function load(manifestUrl: string): Promise<void> {
   });
   try {
     await tify.ready;
-    plugin = await sidePanelPlugin(tify, {
-      panelEl: document.querySelector('#panel') as HTMLElement,
-    });
+    plugin = await sidePanelPlugin(tify, {});
   } catch (error) {
     console.error(error);
   }

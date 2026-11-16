@@ -94,6 +94,72 @@ export function createSidePanel(host: HTMLElement, title: string): SidePanel {
   return { root: host, body, status };
 }
 
+/**
+ * Panel skeleton without a home in the page: lets plugins keep their render
+ * code unguarded when the caller disabled the panel (`panelEl: null`) —
+ * writes land in a detached DOM that is never shown.
+ */
+export function detachedSidePanel(): SidePanel {
+  return createSidePanel(document.createElement('aside'), '');
+}
+
+/** Result of panel host resolution. */
+export interface PanelHost {
+  /** The host element, or null when the caller disabled the panel. */
+  host: HTMLElement | null;
+  /** True when the host was auto-created and must be removed on destroy(). */
+  owned: boolean;
+}
+
+/** Viewer container element, if resolvable from tify.options. */
+function viewerContainer(tify: Tify): Element | null {
+  const container = tify.options?.container;
+  if (typeof container === 'string') return document.querySelector(container);
+  return container instanceof Element ? container : null;
+}
+
+/**
+ * Resolve a plugin's panel host: a supplied element stays page-owned, `null`
+ * disables the panel, and omitting it lets the plugin create its own host —
+ * no page markup required. The auto host is appended right after the viewer
+ * container (after hosts created by earlier plugins, keeping panel order =
+ * init order). That spot only matters for sidecar mode (`dock: false` /
+ * unrecognized DOM): docking re-parents the element into the viewer chrome
+ * within the same task, before anything is painted.
+ */
+export function resolvePanelHost(
+  tify: Tify,
+  id: string,
+  panelEl: null,
+): PanelHost & { host: null; owned: false };
+export function resolvePanelHost(
+  tify: Tify,
+  id: string,
+  panelEl?: HTMLElement,
+): PanelHost & { host: HTMLElement };
+export function resolvePanelHost(tify: Tify, id: string, panelEl?: HTMLElement | null): PanelHost;
+export function resolvePanelHost(tify: Tify, id: string, panelEl?: HTMLElement | null): PanelHost {
+  if (panelEl === null) return { host: null, owned: false };
+  if (panelEl) return { host: panelEl, owned: false };
+  const host = document.createElement('aside');
+  host.className = `tify-plugin-panel tify-plugin-panel-${id} tify-plugin-panel-auto`;
+  const container = viewerContainer(tify);
+  if (container) {
+    let anchor: Element = container;
+    let next = container.nextElementSibling;
+    while (next instanceof Element && next.classList.contains('tify-plugin-panel-auto')) {
+      anchor = next;
+      next = next.nextElementSibling;
+    }
+    anchor.after(host);
+  } else {
+    // No container resolvable: dock mode will decide anyway; keep the sidecar
+    // fallback visible instead of dropping the element on the floor.
+    document.body.append(host);
+  }
+  return { host, owned: true };
+}
+
 /** Small fetch helper with timeout, for manifest/info.json/C2PA-adjacent reads. */
 export async function fetchJson(url: string, timeoutMs = 15000): Promise<any> {
   const controller = new AbortController();

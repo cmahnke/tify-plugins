@@ -40,6 +40,7 @@ import {
 import {
   createSidePanel,
   onPagesChange,
+  resolvePanelHost,
   waitReady,
   type SidePanel,
   type TifyPlugin,
@@ -48,11 +49,15 @@ import {
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
 
 export interface AnnotoriousOptions {
-  /** Host element for the annotation list. Omit for overlay-only mode. */
+  /**
+   * Host element for the annotation list. Omit to let the plugin create its
+   * own host next to the viewer — no page markup required. `null` disables
+   * the panel (overlay-only mode).
+   */
   panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
-   * true: dock or throw. false: never dock. Ignored without panelEl.
+   * true: dock or throw. false: never dock. Ignored with `panelEl: null`.
    */
   dock?: boolean | 'auto';
   /** Open the docked panel after init (default true). */
@@ -178,20 +183,19 @@ export async function annotoriousPlugin(
   const { t } = await createTranslator(tify, { de });
   // Silence core's missing-plugin warning for the features this plugin owns.
   const unregister = registerPlugin('annotorious');
-  const panel: SidePanel | null = options.panelEl
-    ? createSidePanel(options.panelEl, t('Annotations'))
+  const { host, owned } = resolvePanelHost(tify, 'annotations', options.panelEl);
+  const panel: SidePanel | null = host ? createSidePanel(host, t('Annotations')) : null;
+  const dock: DockHandle | null = host
+    ? dockPanel({
+        tify,
+        id: 'annotations',
+        label: t('Annotations'),
+        iconSvg: DOCK_ICONS.comment,
+        contentEl: host,
+        contentOwned: owned,
+        mode: options.dock,
+      })
     : null;
-  const dock: DockHandle | null =
-    panel && options.panelEl
-      ? dockPanel({
-          tify,
-          id: 'annotations',
-          label: t('Annotations'),
-          iconSvg: DOCK_ICONS.comment,
-          contentEl: options.panelEl,
-          mode: options.dock,
-        })
-      : null;
   if (options.autoOpen !== false) dock?.open();
 
   const viewer = tify.viewer;
@@ -358,9 +362,10 @@ export async function annotoriousPlugin(
       } catch {
         // Viewer may already be gone.
       }
-      if (options.panelEl) {
-        options.panelEl.classList.remove('tify-plugin-panel');
-        options.panelEl.innerHTML = '';
+      if (host) {
+        host.classList.remove('tify-plugin-panel');
+        host.innerHTML = '';
+        if (owned) host.remove();
       }
     },
   };

@@ -46,10 +46,10 @@ test('imports manifest annotations into the panel', async ({ page }) => {
   await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
     timeout: 15_000,
   });
-  await expect(page.locator('#panel tbody tr')).toHaveCount(2);
-  await expect(page.locator('#panel tbody tr').first()).toContainText('Note 1');
+  await expect(page.locator('.tify-plugin-panel tbody tr')).toHaveCount(2);
+  await expect(page.locator('.tify-plugin-panel tbody tr').first()).toContainText('Note 1');
   // Panel-only degradation is visible and flagged (WebGL-less environments).
-  const shapesMode = await page.locator('#panel').getAttribute('data-shapes');
+  const shapesMode = await page.locator('.tify-plugin-panel').getAttribute('data-shapes');
   expect(['on', 'off']).toContain(shapesMode);
 });
 
@@ -62,8 +62,8 @@ test('clicking a canvas shape highlights its list row', async ({ page }) => {
   await expect(page.locator('.tify-plugin-status')).toContainText('2 annotations', {
     timeout: 15_000,
   });
-  await expect(page.locator('#panel tbody tr')).toHaveCount(2);
-  const row = page.locator('#panel tbody tr').first();
+  await expect(page.locator('.tify-plugin-panel tbody tr')).toHaveCount(2);
+  const row = page.locator('.tify-plugin-panel tbody tr').first();
   // Let the tile world settle first: the annotorious draw needs a loaded
   // world item, and TIFY veils the viewer while tiles are still loading.
   await expect(page.locator('.tify-loading')).toBeHidden({ timeout: 15_000 });
@@ -99,8 +99,8 @@ test('clicking a shape reopens a manually closed panel', async ({ page }) => {
   // Panels auto-open; close it manually, then the shape must bring it back.
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
   await dock.click();
-  await expect(page.locator('#panel')).toBeHidden();
-  const row = page.locator('#panel tbody tr').first();
+  await expect(page.locator('.tify-plugin-panel')).toBeHidden();
+  const row = page.locator('.tify-plugin-panel tbody tr').first();
   await expect(page.locator('.tify-loading')).toBeHidden({ timeout: 15_000 });
   await expect
     .poll(
@@ -118,7 +118,7 @@ test('clicking a shape reopens a manually closed panel', async ({ page }) => {
     .toContain('is-active');
   // The click reopens the dock so the highlight is actually visible.
   await expect(dock).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('#panel')).toBeVisible();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
 });
 
 test('clicking a list row zooms the viewer to the annotation', async ({ page }) => {
@@ -133,8 +133,8 @@ test('clicking a list row zooms the viewer to the annotation', async ({ page }) 
   await expect(transform).toBeAttached();
   const before = await transform.getAttribute('transform');
   // Panels auto-open after init — no dock click needed.
-  await expect(page.locator('#panel')).toBeVisible();
-  await page.locator('#panel tbody tr button').first().click();
+  await expect(page.locator('.tify-plugin-panel')).toBeVisible();
+  await page.locator('.tify-plugin-panel tbody tr button').first().click();
   await expect
     .poll(async () => transform.getAttribute('transform'), { timeout: 8000 })
     .not.toBe(before);
@@ -237,8 +237,8 @@ test('imports v2 otherContent annotations into the panel', async ({ page }) => {
   await expect(page.locator('.tify-plugin-status')).toContainText('1 annotations', {
     timeout: 15_000,
   });
-  await expect(page.locator('#panel tbody tr')).toHaveCount(1);
-  await expect(page.locator('#panel tbody tr').first()).toContainText('Note 1');
+  await expect(page.locator('.tify-plugin-panel tbody tr')).toHaveCount(1);
+  await expect(page.locator('.tify-plugin-panel tbody tr').first()).toContainText('Note 1');
 });
 
 test('a loaded plugin silences its own missing-plugin warning', async ({ page }) => {
@@ -344,7 +344,7 @@ test('double-page spread shows annotations from both facing pages', async ({ pag
   await expect(page.locator('.tify-plugin-status')).toContainText('4 annotations', {
     timeout: 15_000,
   });
-  const rows = page.locator('#panel tbody tr');
+  const rows = page.locator('.tify-plugin-panel tbody tr');
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(0)).toContainText('Page 2 Note 1');
   await expect(rows.nth(2)).toContainText('Page 3 Note 1');
@@ -372,7 +372,7 @@ test('double-page spread shows annotations from both facing pages', async ({ pag
       await page.mouse.move(p.x, p.y, { steps: 5 });
       await page.mouse.down();
       await page.mouse.up();
-      return page.locator('#panel tbody tr').nth(2).getAttribute('aria-current');
+      return page.locator('.tify-plugin-panel tbody tr').nth(2).getAttribute('aria-current');
     })
     .toBe('true');
 });

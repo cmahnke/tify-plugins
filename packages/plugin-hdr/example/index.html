@@ -20,21 +20,20 @@
       </header>
       <div class="layout">
         <div id="tify" class="tify-frame"></div>
-        <aside id="panel" data-i18n-aria="HDR panel" aria-label="HDR panel"></aside>
       </div>
       <details class="code-example">
         <summary data-i18n="Code example">Code example</summary>
-        <pre><code class="language-xml">&lt;!-- Viewer and panel hosts in your markup --&gt;
-&lt;div id="tify"&gt;&lt;/div&gt;
-&lt;aside id="panel"&gt;&lt;/aside&gt;</code></pre>
+        <pre><code class="language-xml">&lt;!-- Only the viewer needs markup — the plugin creates its own panel --&gt;
+&lt;div id="tify"&gt;&lt;/div&gt;</code></pre>
         <pre><code class="language-typescript">import Tify from 'tify';
 import { enableHdrCanvasOnce, hdrPlugin } from '@projektemacher/tify-plugin-hdr';
 
 // CRITICAL: hook the canvas before Tify creates its OpenSeadragon canvas.
 const hdrHook = enableHdrCanvasOnce();
 const tify = new Tify({ container: '#tify', manifestUrl });
+// No panelEl: the plugin creates its own panel and docks
+// a toggle button into the viewer header.
 const plugin = await hdrPlugin(tify, {
-  panelEl: document.querySelector('#panel'),
   hook: hdrHook,
 });</code></pre>
         <p class="code-links">

@@ -16,10 +16,12 @@ import type { StyleSpecification } from 'maplibre-gl';
 import {
   canvasesOf,
   createSidePanel,
+  detachedSidePanel,
   fetchJson,
   getManifest,
   getVisiblePages,
   onPagesChange,
+  resolvePanelHost,
   waitReady,
   type SidePanel,
   type TifyPlugin,
@@ -38,8 +40,12 @@ import type { PlaceMap } from './map-viewer';
 import './navplace.css';
 
 export interface NavPlaceOptions {
-  /** Panel content host (sidecar unless docked into the viewer). */
-  panelEl: HTMLElement;
+  /**
+   * Panel content host (sidecar unless docked into the viewer). Omit to let
+   * the plugin create its own host next to the viewer — no page markup
+   * required. `null` disables the panel (plugin becomes a no-op).
+   */
+  panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
    * true: dock or throw. false: never dock.
@@ -160,7 +166,8 @@ export async function navPlacePlugin(
   const { lang, t } = await createTranslator(tify, { de });
   // Silence core's missing-plugin warning for the features this plugin owns.
   const unregister = registerPlugin('navplace');
-  const panel: SidePanel = createSidePanel(options.panelEl, t('Places'));
+  const { host, owned } = resolvePanelHost(tify, 'navplace', options.panelEl);
+  const panel: SidePanel = host ? createSidePanel(host, t('Places')) : detachedSidePanel();
 
   const mapEl = document.createElement('div');
   mapEl.className = 'navplace-map';
@@ -268,21 +275,24 @@ export async function navPlacePlugin(
     }
   };
 
-  const dock: DockHandle | null = dockPanel({
-    tify,
-    id: 'navplace',
-    label: t('Places'),
-    iconSvg: DOCK_ICONS.globe,
-    contentEl: options.panelEl,
-    mode: options.dock,
-    onToggle: (open) => {
-      if (open && currentEntries.length > 0) ensureMap();
-    },
-  });
+  const dock: DockHandle | null = host
+    ? dockPanel({
+        tify,
+        id: 'navplace',
+        label: t('Places'),
+        iconSvg: DOCK_ICONS.globe,
+        contentEl: host,
+        contentOwned: owned,
+        mode: options.dock,
+        onToggle: (open) => {
+          if (open && currentEntries.length > 0) ensureMap();
+        },
+      })
+    : null;
   if (options.autoOpen !== false) dock?.open();
 
   // Sidecar fallback: load the map when the panel scrolls into view.
-  if (!dock && typeof IntersectionObserver === 'function') {
+  if (host && !dock && typeof IntersectionObserver === 'function') {
     io = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       if (currentEntries.length === 0 || viewerPromise) return;
@@ -315,8 +325,11 @@ export async function navPlacePlugin(
       void viewerPromise?.then((placeMap) => placeMap?.destroy()).catch(() => undefined);
       unregister();
       dock?.destroy();
-      options.panelEl.classList.remove('tify-plugin-panel');
-      options.panelEl.innerHTML = '';
+      if (host) {
+        host.classList.remove('tify-plugin-panel');
+        host.innerHTML = '';
+        if (owned) host.remove();
+      }
     },
   };
 }

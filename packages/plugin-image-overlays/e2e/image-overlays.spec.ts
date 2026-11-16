@@ -61,7 +61,9 @@ test('clicking a word box shows its text in the sidebar', async ({ page }) => {
   await expect(words).toHaveCount(2);
   await words.first().click();
   await expect(words.first()).toHaveClass(/is-selected/);
-  await expect(page.locator('#panel .tify-plugin-note')).toHaveText('Selected: Gänseliesel');
+  await expect(page.locator('.tify-plugin-panel .tify-plugin-note')).toHaveText(
+    'Selected: Gänseliesel',
+  );
 });
 
 test('sidebar toggles annotations and outlines', async ({ page }) => {
@@ -87,8 +89,8 @@ test('fill color and opacity restyle the boxes', async ({ page }) => {
   await page.goto(EXAMPLE);
   const words = page.locator('.tify-plugin-tei-word');
   await expect(words).toHaveCount(2);
-  await page.locator('#panel input[type="color"]').fill('#ff0000');
-  await page.locator('#panel input[type="range"]').fill('0.5');
+  await page.locator('.tify-plugin-panel input[type="color"]').fill('#ff0000');
+  await page.locator('.tify-plugin-panel input[type="range"]').fill('0.5');
   await expect
     .poll(() => words.first().evaluate((el) => getComputedStyle(el).backgroundColor))
     .toBe('rgba(255, 0, 0, 0.5)');
@@ -97,7 +99,7 @@ test('fill color and opacity restyle the boxes', async ({ page }) => {
 test('opacity slider stays visible when docked inside TIFY', async ({ page }) => {
   await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
   await page.goto(EXAMPLE);
-  const slider = page.locator('#panel input[type="range"]');
+  const slider = page.locator('.tify-plugin-panel input[type="range"]');
   await expect(slider).toBeVisible();
   // TIFY skins every [type=range] under .tify as its own scan slider
   // (~6px stump, invisible thumb); ours must render taller than that.
@@ -116,8 +118,8 @@ test('URL params initialize rendering state via the API', async ({ page }) => {
   await expect
     .poll(() => words.first().evaluate((el) => getComputedStyle(el).backgroundColor))
     .toBe('rgba(255, 0, 0, 0.5)');
-  await expect(page.locator('#panel input[type="color"]')).toHaveValue('#ff0000');
-  await expect(page.locator('#panel input[type="range"]')).toHaveValue('0.5');
+  await expect(page.locator('.tify-plugin-panel input[type="color"]')).toHaveValue('#ff0000');
+  await expect(page.locator('.tify-plugin-panel input[type="range"]')).toHaveValue('0.5');
   await expect(page.getByRole('checkbox', { name: 'Show annotations' })).not.toBeChecked();
   await expect(page.getByRole('checkbox', { name: 'Show outlines' })).not.toBeChecked();
 });

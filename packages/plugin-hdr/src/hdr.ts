@@ -20,7 +20,9 @@ import {
 } from '@projektemacher/tify-plugin-core';
 import {
   createSidePanel,
+  detachedSidePanel,
   onPagesChange,
+  resolvePanelHost,
   waitReady,
   type SidePanel,
   type TifyPlugin,
@@ -28,8 +30,13 @@ import {
 import { DOCK_ICONS, dockPanel, type DockHandle } from '@projektemacher/tify-plugin-core';
 
 export interface HdrOptions {
-  /** Panel content host (sidecar unless docked into the viewer). */
-  panelEl: HTMLElement;
+  /**
+   * Panel content host (sidecar unless docked into the viewer). Omit to let
+   * the plugin create its own host next to the viewer — no page markup
+   * required. `null` disables the panel (plugin becomes a no-op besides
+   * `getServiceDescription()`).
+   */
+  panelEl?: HTMLElement | null;
   /**
    * Result of `enableHdrCanvasOnce()` — call it before `new Tify()` and pass
    * the result so the panel can explain the setup state (flag hint, fallback).
@@ -139,7 +146,8 @@ export async function hdrPlugin(tify: Tify, options: HdrOptions): Promise<HdrPlu
   const { t } = await createTranslator(tify, { de });
   // Silence core's missing-plugin warning for the features this plugin owns.
   const unregister = registerPlugin('hdr');
-  const panel: SidePanel = createSidePanel(options.panelEl, t('HDR'));
+  const { host, owned } = resolvePanelHost(tify, 'hdr', options.panelEl);
+  const panel: SidePanel = host ? createSidePanel(host, t('HDR')) : detachedSidePanel();
   const serviceBody = document.createElement('div');
   serviceBody.className = 'tify-plugin-service';
   panel.body.append(serviceBody);
@@ -157,14 +165,17 @@ export async function hdrPlugin(tify: Tify, options: HdrOptions): Promise<HdrPlu
   let disposed = false;
   let unsubscribe: (() => void) | null = null;
 
-  const dock: DockHandle | null = dockPanel({
-    tify,
-    id: 'hdr',
-    label: t('HDR'),
-    iconSvg: DOCK_ICONS.image,
-    contentEl: options.panelEl,
-    mode: options.dock,
-  });
+  const dock: DockHandle | null = host
+    ? dockPanel({
+        tify,
+        id: 'hdr',
+        label: t('HDR'),
+        iconSvg: DOCK_ICONS.image,
+        contentEl: host,
+        contentOwned: owned,
+        mode: options.dock,
+      })
+    : null;
   if (options.autoOpen !== false) dock?.open();
 
   const paintTint = (): void => {
@@ -228,8 +239,11 @@ export async function hdrPlugin(tify: Tify, options: HdrOptions): Promise<HdrPlu
       unregister();
       unsubscribe?.();
       dock?.destroy();
-      options.panelEl.classList.remove('tify-plugin-panel');
-      options.panelEl.innerHTML = '';
+      if (host) {
+        host.classList.remove('tify-plugin-panel');
+        host.innerHTML = '';
+        if (owned) host.remove();
+      }
     },
   };
 }

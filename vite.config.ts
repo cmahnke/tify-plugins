@@ -26,6 +26,14 @@ for (const dir of readdirSync(resolve(root, 'packages'))) {
   if (existsSync(entry)) exampleInputs[`example-${dir}`] = entry;
 }
 
+// E2E test pages (packages/*/e2e/page/) are built too, so the preview
+// server (CI, E2E_PREVIEW=1) serves the same pages as the dev server.
+const e2ePageInputs: Record<string, string> = {};
+for (const dir of readdirSync(resolve(root, 'packages'))) {
+  const entry = resolve(root, 'packages', dir, 'e2e', 'page', 'index.html');
+  if (existsSync(entry)) e2ePageInputs[`e2e-${dir}`] = entry;
+}
+
 export default defineConfig(({ command }) => ({
   // GitHub Pages deploys set VITE_BASE=/&lt;repo&gt;/; local dev/preview serves at root.
   base: process.env.VITE_BASE || '/',
@@ -64,6 +72,7 @@ export default defineConfig(({ command }) => ({
       input: {
         main: resolve(root, 'index.html'),
         ...exampleInputs,
+        ...e2ePageInputs,
       },
     },
   },

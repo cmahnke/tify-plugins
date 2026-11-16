@@ -42,7 +42,6 @@ async function load(manifestUrl: string): Promise<void> {
   plugin = null;
   tify?.destroy();
   document.querySelector('#tify')!.innerHTML = '';
-  (document.querySelector('#panel') as HTMLElement).innerHTML = '';
   tify = new Tify({
     container: '#tify',
     manifestUrl,
@@ -51,7 +50,6 @@ async function load(manifestUrl: string): Promise<void> {
   try {
     await tify.ready;
     plugin = await hdrPlugin(tify, {
-      panelEl: document.querySelector('#panel') as HTMLElement,
       hook: hdrHook,
     });
   } catch (error) {

@@ -30,15 +30,16 @@ const plugin = await imageOverlaysPlugin(tify, {
 
 ## Overlay panel
 
-Pass `panelEl` to get a sidebar with live rendering controls: show/hide
-the annotation layer, show/hide the box outlines, box fill color and
-opacity — plus the clicked word's text. Clicking a word box selects it;
-clicking again deselects. The panel docks into the viewer header.
+The plugin ships a sidebar with live rendering controls: show/hide the
+annotation layer, show/hide the box outlines, box fill color and opacity —
+plus the clicked word's text. Clicking a word box selects it; clicking again
+deselects. The panel docks into the viewer header. Without `panelEl` the
+plugin creates its own host element (removed again on `destroy()`);
+`panelEl: null` runs overlay-only without any panel.
 
 ```ts
 const plugin = await imageOverlaysPlugin(tify, {
   markers: 3,
-  panelEl: document.querySelector('#panel'),
   showAnnotations: true,
   showOutlines: true,
   fillColor: '#0b5fff',

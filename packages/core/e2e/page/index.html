@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel host modes — tify-plugins e2e</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <button id="destroy" type="button">Destroy plugin</button>
+      </header>
+      <div id="layout">
+        <div id="tify"></div>
+        <!-- Page-owned host, only used by ?mode=explicit -->
+        <aside id="host"></aside>
+      </div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

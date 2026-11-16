@@ -15,6 +15,5 @@
   "Places": "Orte",
   "Places from the IIIF navPlace extension on a configurable vector-tile map.": "Orte aus der IIIF-Erweiterung navPlace auf einer konfigurierbaren Vektor-Kachelkarte.",
   "Places map": "Ortskarte",
-  "Places panel": "Orte-Bereich",
   "Places unavailable: {error}": "Orte nicht verfügbar: {error}"
 }

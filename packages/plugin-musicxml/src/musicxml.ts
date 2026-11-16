@@ -18,12 +18,14 @@ import type Tify from 'tify';
 import {
   canvasesOf,
   createSidePanel,
+  detachedSidePanel,
   fetchText,
   getManifest,
   getPages,
   getVisiblePages,
   onPagesChange,
   pageLayout,
+  resolvePanelHost,
   waitReady,
   type PageLayoutEntry,
   type SidePanel,
@@ -49,8 +51,12 @@ export interface RegionOverlayOptions {
 }
 
 export interface MusicXmlOptions {
-  /** Panel content host (sidecar unless docked into the viewer). */
-  panelEl: HTMLElement;
+  /**
+   * Panel content host (sidecar unless docked into the viewer). Omit to let
+   * the plugin create its own host next to the viewer — no page markup
+   * required. `null` disables the panel (score overlays keep working).
+   */
+  panelEl?: HTMLElement | null;
   /**
    * 'auto' (default): dock into TIFY when recognized, else sidecar.
    * true: dock or throw. false: never dock.
@@ -348,18 +354,24 @@ export async function musicxmlPlugin(
   const { t } = await createTranslator(tify, { de });
   // Silence core's missing-plugin warning for the features this plugin owns.
   const unregister = registerPlugin('musicxml');
-  const panel: SidePanel = createSidePanel(options.panelEl, t('Score'));
+  const { host, owned } = resolvePanelHost(tify, 'score', options.panelEl);
+  // panelEl: null keeps the scan overlays working; panel writes land in a
+  // detached skeleton that is never shown.
+  const panel: SidePanel = host ? createSidePanel(host, t('Score')) : detachedSidePanel();
   const showScoreOverlay = options.showScoreOverlay ?? true;
   const showHighlights = options.showHighlights ?? true;
 
-  const dock: DockHandle | null = dockPanel({
-    tify,
-    id: 'score',
-    label: t('Score'),
-    iconSvg: DOCK_ICONS.music,
-    contentEl: options.panelEl,
-    mode: options.dock,
-  });
+  const dock: DockHandle | null = host
+    ? dockPanel({
+        tify,
+        id: 'score',
+        label: t('Score'),
+        iconSvg: DOCK_ICONS.music,
+        contentEl: host,
+        contentOwned: owned,
+        mode: options.dock,
+      })
+    : null;
   if (options.autoOpen !== false) dock?.open();
 
   let disposed = false;
@@ -1195,8 +1207,11 @@ export async function musicxmlPlugin(
       unsubscribe?.();
       dock?.destroy();
       clear();
-      options.panelEl.classList.remove('tify-plugin-panel');
-      options.panelEl.innerHTML = '';
+      if (host) {
+        host.classList.remove('tify-plugin-panel');
+        host.innerHTML = '';
+        if (owned) host.remove();
+      }
     },
   };
 }

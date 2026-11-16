@@ -11,6 +11,13 @@ tint.
 import { c2paPlugin } from '@projektemacher/tify-plugin-c2pa';
 import '@projektemacher/tify-plugin-core/style.css';
 
+// No page markup needed: the plugin creates its own panel
+// and docks a toggle button into the viewer header.
+const plugin = await c2paPlugin(tify, {
+  trustAnchors: { url: 'https://contentcredentials.org/trust/anchors.pem' },
+});
+
+// With an explicit page-owned host (sidecar unless docked):
 const plugin = await c2paPlugin(tify, {
   panelEl: document.querySelector('#panel'),
   trustAnchors: { url: 'https://contentcredentials.org/trust/anchors.pem' },

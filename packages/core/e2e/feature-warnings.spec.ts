@@ -81,7 +81,7 @@ test('a loaded plugin silences its own warning', async ({ page }) => {
   const lines = captureConsole(page);
   await mockIiif(page, { manifest: featureManifest() });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel')).toContainText('TEI transcription');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('TEI transcription');
   await waitForWarnings(lines, 4);
   await expect(lines.some((l) => l.includes('@projektemacher/tify-plugin-image-overlays'))).toBe(
     true,
@@ -106,7 +106,7 @@ test('no warnings for a plain manifest', async ({ page }) => {
   const lines = captureConsole(page);
   await mockIiif(page, { manifest: buildManifest({ canvases: 1 }) });
   await page.goto(`${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`);
-  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing page 1');
   expect(lines.filter((l) => l.includes('[tify-plugins]'))).toEqual([]);
 });
 
@@ -116,7 +116,7 @@ test('?warnings=0 silences all warnings', async ({ page }) => {
   await page.goto(
     `${EXAMPLE}?warnings=0&manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}`,
   );
-  await expect(page.locator('#panel')).toContainText('Viewing page 1');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Viewing page 1');
   expect(lines.filter((l) => l.includes('[tify-plugins]'))).toEqual([]);
 });
 
@@ -126,6 +126,6 @@ test('german panel chrome stays warning-free', async ({ page }) => {
   await page.goto(
     `${EXAMPLE}?manifest=${encodeURIComponent(`${MOCK_BASE}/manifest.json`)}&lang=de`,
   );
-  await expect(page.locator('#panel')).toContainText('Bilddienst');
+  await expect(page.locator('.tify-plugin-panel')).toContainText('Bilddienst');
   expect(lines.filter((l) => l.includes('[tify-plugins]'))).toEqual([]);
 });

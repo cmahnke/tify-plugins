@@ -4,13 +4,19 @@
 
 Custom metadata side panel for the [TIFY](https://tify.rocks/) IIIF viewer:
 document title, page status, and prev/next/thumbnails controls. Docks into
-TIFY's viewer chrome when recognized, otherwise renders into the given host
-element.
+TIFY's viewer chrome when recognized, otherwise renders beside the viewer.
+
+No page markup required: without `panelEl` the plugin creates its own host
+element and removes it again on `destroy()`. Pass a page-owned element for
+custom placement, or `panelEl: null` to disable the panel.
 
 ```ts
 import { sidePanelPlugin } from '@projektemacher/tify-plugin-side-panel';
 import '@projektemacher/tify-plugin-core/style.css';
 
+const plugin = await sidePanelPlugin(tify);
+
+// With an explicit page-owned host (sidecar unless docked):
 const plugin = await sidePanelPlugin(tify, { panelEl: document.querySelector('#panel') });
 ```
 
