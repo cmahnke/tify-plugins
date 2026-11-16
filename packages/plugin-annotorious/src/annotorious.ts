@@ -211,6 +211,11 @@ export async function annotoriousPlugin(
   } catch (error) {
     console.debug('[tify-plugins] Annotorious canvas unavailable:', error);
     anno = null;
+    // Annotorious appends its GL canvas before creating the renderer; a
+    // failed init leaves the dead element behind with no destroy hook.
+    viewer.element
+      ?.querySelectorAll('canvas.a9s-gl-canvas')
+      .forEach((canvas: HTMLCanvasElement) => canvas.remove());
   }
   // W3C adapter: parses IIIF xywh fragment targets into shapes natively.
   const w3c = W3CImageFormat('iiif');
@@ -361,6 +366,11 @@ export async function annotoriousPlugin(
         anno?.destroy();
       } catch {
         // Viewer may already be gone.
+      }
+      if (!anno) {
+        viewer.element
+          ?.querySelectorAll('canvas.a9s-gl-canvas')
+          .forEach((canvas: HTMLCanvasElement) => canvas.remove());
       }
       if (host) {
         host.classList.remove('tify-plugin-panel');

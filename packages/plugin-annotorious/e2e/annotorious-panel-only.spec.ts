@@ -25,8 +25,9 @@ test('degrades to panel-only mode without WebGL', async ({ page }) => {
     'Shapes not rendered (WebGL unavailable)',
   );
   // List still renders, as plain rows (no canvas shapes, no select buttons).
-  // NB: annotorious may leave an orphan (non-functional) GL canvas element
-  // behind after its init throws — the panel flag is the source of truth.
+  // Annotorious appends its GL canvas before creating the renderer, so a
+  // failed init would leave a dead element behind — the plugin removes it.
+  await expect(page.locator('canvas.a9s-gl-canvas')).toHaveCount(0);
   await expect(page.locator('.tify-plugin-panel tbody tr')).toHaveCount(2);
   await expect(page.locator('.tify-plugin-panel .tify-plugin-anno-link')).toHaveCount(0);
 });
