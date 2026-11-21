@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@projektemacher/tify-plugin-core": "^0.3.0",
-    "maplibre-gl": "^6.18.0"
+    "maplibre-gl": "^6.19.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0"
