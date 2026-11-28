@@ -43,7 +43,7 @@
     "@projektemacher/tify-plugin-core": "^0.3.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.65.0",
+    "@playwright/test": "^1.65.1",
     "linkedom": "^0.18.15"
   },
   "peerDependencies": {
