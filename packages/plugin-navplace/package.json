@@ -48,7 +48,7 @@
     "maplibre-gl": "^6.19.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.65.0"
+    "@playwright/test": "^1.65.1"
   },
   "peerDependencies": {
     "tify": "0.36.2"
