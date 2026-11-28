@@ -672,7 +672,10 @@ test('tempo change during playback reschedules without restart', async ({ page }
   await page.waitForTimeout(1800);
   const after = await oscStarts(page);
   expect(after.length).toBeGreaterThan(before.length);
-  expect(after[before.length].t).toBeGreaterThanOrEqual(before[before.length - 1].t);
+  // Scheduling lookahead can interleave the first post-change onset with the
+  // last pre-change one by a few ms, so allow a small backwards tolerance —
+  // the point is "no restart to 0", not strict monotonicity.
+  expect(after[before.length].t).toBeGreaterThanOrEqual(before[before.length - 1].t - 0.05);
   // 180 BPM: quarter-note onsets 1/3 s apart (bounded for timing jitter).
   const afterGap = median(gaps(after.slice(before.length)));
   expect(afterGap).toBeGreaterThan(beforeGap * 0.5);
